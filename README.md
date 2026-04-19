@@ -14,9 +14,27 @@ pnpm dev
 bun dev
 ```
 
+Environment-specific dev scripts:
+
+```bash
+npm run dev:store
+npm run dev:client
+```
+
+These scripts use isolated Next build directories (`.next-store` and `.next-client`),
+so you can run both at the same time in separate terminals. If a port is busy, Next.js
+automatically falls back to another available port.
+
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+
+## Home Page Selection
+
+Set `NEXT_PUBLIC_HOME_PAGE_MODE` to choose what `/` opens:
+
+- `client` (default fallback)
+- `store`
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
