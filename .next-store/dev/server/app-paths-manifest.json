@@ -1,6 +1,0 @@
-{
-  "/client/settings/page": "app/client/settings/page.js",
-  "/page": "app/page.js",
-  "/store/orders/[orderId]/page": "app/store/orders/[orderId]/page.js",
-  "/store/page": "app/store/page.js"
-}

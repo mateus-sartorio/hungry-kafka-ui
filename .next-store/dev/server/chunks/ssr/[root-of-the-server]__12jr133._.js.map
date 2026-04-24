@@ -1,8 +1,0 @@
-{
-  "version": 3,
-  "sources": [],
-  "sections": [
-    {"offset": {"line": 13, "column": 0}, "map": {"version":3,"sources":["file:///home/mateus/Faculdade/event_driven_systems/queue-sine-ui/app/favicon.ico.mjs%20%28structured%20image%20object%29"],"sourcesContent":["import src from \"IMAGE\";\nexport default { src, width: 32, height: 23 }\n"],"names":["src","width","height"],"mappings":";;;;AAAA;;uCACe;IAAEA,KAAAA,mIAAG;IAAEC,OAAO;IAAIC,QAAQ;AAAG"}},
-    {"offset": {"line": 28, "column": 0}, "map": {"version":3,"sources":["file:///home/mateus/Faculdade/event_driven_systems/queue-sine-ui/app/home-mode.ts"],"sourcesContent":["export type HomeMode = \"client\" | \"store\";\n\nexport function getHomeMode(): HomeMode {\n  const mode = process.env.NEXT_PUBLIC_HOME_PAGE_MODE;\n  return mode === \"store\" ? \"store\" : \"client\";\n}\n"],"names":["getHomeMode","mode"],"mappings":";;;;AAEO,SAASA;IACd,MAAMC;IACN,OAAO,uCAAmB,UAAU;AACtC"}},
-    {"offset": {"line": 40, "column": 0}, "map": {"version":3,"sources":["file:///home/mateus/Faculdade/event_driven_systems/queue-sine-ui/app/page.tsx"],"sourcesContent":["import { redirect } from \"next/navigation\";\nimport { getHomeMode } from \"./home-mode\";\n\nexport default function HomePageRouter() {\n  const mode = getHomeMode();\n  redirect(mode === \"store\" ? \"/store\" : \"/client\");\n}\n"],"names":["HomePageRouter","mode"],"mappings":";;;;AAAA;AAAA;AACA;;;AAEe,SAASA;IACtB,MAAMC,OAAO,IAAA,kIAAW;IACxB,IAAA,iMAAQ,EAACA,SAAS,UAAU,WAAW;AACzC"}}]
-}

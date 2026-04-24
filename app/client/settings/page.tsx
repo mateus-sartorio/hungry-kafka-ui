@@ -1,9 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
-import { FaReceipt, FaUser, FaUtensils } from "react-icons/fa";
+import { BottomNavigation } from "../components/bottom-navigation";
 import { readStoredUsername, USERNAME_STORAGE_KEY } from "../user-config";
 import { ClientHeader } from "../components/client-header";
 
@@ -63,26 +62,7 @@ export default function ClientSettingsPage() {
         </div>
       </main>
 
-      <nav className="fixed bottom-0 z-50 flex h-20 w-full items-center justify-around border-t border-zinc-200 bg-white/95 px-4 shadow-[0_-8px_32px_rgba(24,28,27,0.04)] backdrop-blur-xl md:hidden">
-        <Link href="/" className="flex flex-col items-center justify-center gap-1 text-zinc-500">
-          <FaUtensils className="h-4 w-4" />
-          <span className="text-[10px] font-semibold uppercase tracking-[0.05em]">Catalog</span>
-        </Link>
-        <Link
-          href="/client/orders"
-          className="flex flex-col items-center justify-center gap-1 text-zinc-500"
-        >
-          <FaReceipt className="h-4 w-4" />
-          <span className="text-[10px] font-semibold uppercase tracking-[0.05em]">Orders</span>
-        </Link>
-        <Link
-          href="/client/settings"
-          className="flex flex-col items-center justify-center gap-1 text-zinc-900"
-        >
-          <FaUser className="h-4 w-4" />
-          <span className="text-[10px] font-semibold uppercase tracking-[0.05em]">Account</span>
-        </Link>
-      </nav>
+      <BottomNavigation activeTab="account" />
     </div>
   );
 }
