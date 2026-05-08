@@ -1,5 +1,5 @@
 import { StoreHeader } from "./components/store-header";
-import Link from "next/link";
+import { OrderDetailsCard } from "./order-details-card";
 
 type StoreOrder = {
   customer: string;
@@ -40,16 +40,6 @@ const storeOrders: StoreOrder[] = [
   },
 ];
 
-function statusStyles(status: StoreOrder["status"]) {
-  if (status === "Preparing") {
-    return "bg-[#c1ff00] text-[#567300]";
-  }
-  if (status === "Ready") {
-    return "bg-[#4c6700] text-white";
-  }
-  return "border border-[#c3caac] bg-[#e0e3e1] text-[#434933]";
-}
-
 export default function StoreHomePage() {
   return (
     <div className="min-h-screen bg-[#f7faf8] pb-8 pt-16 text-[#181c1b]">
@@ -58,56 +48,14 @@ export default function StoreHomePage() {
       <main className="mx-auto max-w-3xl px-4 py-8">
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           {storeOrders.map((order) => (
-            <Link
+            <OrderDetailsCard
               key={order.orderNumber}
-              href={`/store/orders/${order.orderNumber.replace("#", "")}`}
-              className={`border p-5 transition-colors duration-200 ${
-                order.status === "Delivered"
-                  ? "border-[#c3caac]/10 bg-[#ebefed] opacity-75"
-                  : "border-[#c3caac]/20 bg-white hover:bg-[#f1f4f2]"
-              }`}
-            >
-              <div className="mb-4 flex items-start justify-between">
-                <div>
-                  <h3
-                    className={`text-xl font-bold ${
-                      order.status === "Delivered" ? "text-[#434933]" : "text-[#181c1b]"
-                    }`}
-                  >
-                    {order.customer}
-                  </h3>
-                  <p
-                    className={`text-sm font-medium tracking-wide ${
-                      order.status === "Delivered" ? "text-[#737a61]" : "text-[#434933]"
-                    }`}
-                  >
-                    {order.orderNumber}
-                  </p>
-                </div>
-                <div
-                  className={`px-3 py-1 text-[10px] font-black uppercase tracking-widest italic ${statusStyles(order.status)}`}
-                >
-                  {order.status}
-                </div>
-              </div>
-
-              <div className="mt-6 flex items-end justify-between border-t border-[#c3caac]/20 pt-4">
-                <div
-                  className={`text-sm font-bold ${
-                    order.status === "Delivered" ? "text-[#737a61]" : "text-[#516070]"
-                  }`}
-                >
-                  {order.itemsLabel}
-                </div>
-                <div
-                  className={`text-2xl font-bold ${
-                    order.status === "Delivered" ? "text-[#434933]" : "text-[#181c1b]"
-                  }`}
-                >
-                  {order.total}
-                </div>
-              </div>
-            </Link>
+              customer={order.customer}
+              orderNumber={order.orderNumber}
+              status={order.status}
+              itemsLabel={order.itemsLabel}
+              total={order.total}
+            />
           ))}
         </div>
       </main>

@@ -5,6 +5,8 @@ import { FormEvent, useState } from "react";
 import { BottomNavigation } from "../components/bottom-navigation";
 import { readStoredUsername, USERNAME_STORAGE_KEY } from "../user-config";
 import { ClientHeader } from "../components/client-header";
+import { AccountSettingsFormCard } from "./account-settings-form-card";
+import { AccountSettingsHeader } from "./account-settings-header";
 
 const FIRST_USERNAME_DEFAULT = "john doe";
 
@@ -27,38 +29,13 @@ export default function ClientSettingsPage() {
 
       <main className="container mx-auto max-w-lg px-6 py-8">
         <div className="flex flex-col gap-8">
-          <div className="space-y-2">
-            <h2 className="text-2xl font-bold uppercase tracking-tight">Account Settings</h2>
-            <p className="text-sm text-[#737a61]">Manage your profile details and preferences.</p>
-          </div>
+          <AccountSettingsHeader />
 
-          <div className="overflow-hidden border border-[#c3caac]/20 bg-white p-6 shadow-sm">
-            <form className="flex flex-col space-y-6" onSubmit={onSubmit}>
-              <div className="space-y-2">
-                <label
-                  className="block text-xs font-bold uppercase tracking-wider text-[#181c1b]"
-                  htmlFor="username"
-                >
-                  Username
-                </label>
-                <input
-                  id="username"
-                  name="username"
-                  type="text"
-                  value={usernameInput}
-                  onChange={(event) => setUsernameInput(event.target.value)}
-                  className="w-full border border-[#c3caac] bg-[#f7faf8] px-4 py-3 text-sm text-[#181c1b] transition-colors focus:border-[#4c6700] focus:outline-none focus:ring-1 focus:ring-[#4c6700]"
-                  placeholder="Enter your username"
-                />
-              </div>
-              <button
-                type="submit"
-                className="w-full bg-[#c1ff00] px-6 py-4 text-sm font-bold italic uppercase tracking-wider text-[#567300] transition-colors hover:bg-[#baf600] active:scale-[0.98]"
-              >
-                Update Profile
-              </button>
-            </form>
-          </div>
+          <AccountSettingsFormCard
+            usernameInput={usernameInput}
+            onUsernameInputChange={setUsernameInput}
+            onSubmit={onSubmit}
+          />
         </div>
       </main>
 

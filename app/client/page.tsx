@@ -7,7 +7,7 @@ import { readStoredUsername } from "./user-config";
 import { CartDrawer } from "./components/cart-drawer";
 import { ClientHeader } from "./components/client-header";
 import { LiveOrder } from "./components/live-order";
-import { ProductCard } from "./components/product-card";
+import { ProductCatalogSection } from "./product-catalog-section";
 import type { ClientHomeData } from "./home-data";
 
 function formatUsd(value: number) {
@@ -85,18 +85,7 @@ export default function ClientHomePage() {
           ]}
         />
 
-        <section>
-          <h2 className="text-4xl font-black tracking-tighter">The Catalog</h2>
-          <p className="mt-1 text-[10px] font-extrabold uppercase tracking-[0.2em] text-[#705a4f]">
-            Curated Daily Selection
-          </p>
-
-          <div className="mt-8 grid grid-cols-1 gap-8 md:grid-cols-12">
-            {homeData?.products.map((product) => (
-              <ProductCard key={product.name} {...product} />
-            ))}
-          </div>
-        </section>
+        <ProductCatalogSection products={homeData?.products ?? []} />
       </main>
 
       <CartDrawer

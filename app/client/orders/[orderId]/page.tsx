@@ -1,10 +1,13 @@
 "use client";
 
-import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { readStoredUsername } from "../../user-config";
 import { ClientHeader } from "../../components/client-header";
+import { OrderStatusCard } from "./order-status-card";
+import { OrderWarningCard } from "./order-warning-card";
+import { OrderTotalSummary } from "./order-total-summary";
+import { ProductDetails } from "./product-details";
 
 const orderItems = [
   {
@@ -48,55 +51,22 @@ export default function OrderDetailsPage() {
       <ClientHeader username={username} backHref="/client/orders" />
 
       <main className="mx-auto max-w-3xl px-6 py-24">
-        <div className="mb-12">
-          <h1 className="mb-2 text-2xl font-bold">Order {orderCode}</h1>
-          <div className="flex items-center gap-2">
-            <span className="bg-[#c1ff00] px-3 py-1 text-[10px] font-black italic uppercase tracking-widest text-[#567300]">
-              Status: Preparing
-            </span>
-            <span className="text-sm text-[#434933]">Est. 15-20 mins</span>
-          </div>
-        </div>
+        <OrderStatusCard orderCode={orderCode} />
 
-        <div className="mb-10 flex items-start gap-4 border-l-4 border-[#c1ff00] bg-[#181c1b] p-5 text-[#f7faf8]">
-          <div className="bg-[#c1ff00] p-2 text-xl text-[#567300]">!</div>
-          <div className="flex-1">
-            <h4 className="mb-1 text-sm font-black italic uppercase tracking-tight text-[#c1ff00]">
-              Order delayed?
-            </h4>
-            <p className="text-sm leading-relaxed opacity-90">
-              Our kitchen is busier than usual. We&apos;re working on it! Your fresh meal will be
-              ready as soon as possible.
-            </p>
-          </div>
-        </div>
+        <OrderWarningCard />
 
         <div className="mb-12 space-y-6">
           {orderItems.map((item) => (
-            <article
+            <ProductDetails
               key={item.name}
-              className="group flex items-center justify-between bg-white p-4 shadow-sm outline outline-1 outline-[#c3caac]/20 transition-colors hover:bg-[#f1f4f2]"
-            >
-              <div className="flex items-center gap-4">
-                <Image
-                  src={item.image}
-                  alt={item.name}
-                  width={64}
-                  height={64}
-                  unoptimized
-                  className="h-16 w-16 object-cover outline outline-1 outline-[#c3caac]/20"
-                />
-                <h3 className="text-lg font-bold transition-all group-hover:italic">{item.name}</h3>
-              </div>
-              <span className="text-lg font-medium">{item.price}</span>
-            </article>
+              name={item.name}
+              price={item.price}
+              image={item.image}
+            />
           ))}
         </div>
 
-        <div className="flex items-end justify-between border-t border-[#c3caac]/20 pt-6">
-          <div className="text-[10px] font-bold uppercase tracking-widest text-[#434933]">Total Amount</div>
-          <div className="text-3xl font-black italic text-[#4c6700]">$28.50</div>
-        </div>
+        <OrderTotalSummary amount="$28.50" />
       </main>
     </div>
   );
