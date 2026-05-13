@@ -64,7 +64,7 @@ export default function ClientHomePage() {
   const total = useMemo(
     () =>
       cartItems.reduce(
-        (sum, item) => sum + item.qty * item.unitPrice,
+        (sum, item) => sum + item.quantity * item.unitPrice,
         0,
       ) ?? 0,
     [cartItems],
@@ -84,7 +84,7 @@ export default function ClientHomePage() {
     if (existingItem) {
       commitCartItems(
         cartItems.map((item) =>
-          item.name === product.name ? { ...item, qty: item.qty + 1 } : item,
+          item.name === product.name ? { ...item, quantity: item.quantity + 1 } : item,
         ),
       );
 
@@ -94,9 +94,10 @@ export default function ClientHomePage() {
     commitCartItems([
       ...cartItems,
       {
+        productId: product.id,
         name: product.name,
         unitPrice: product.price,
-        qty: 1,
+        quantity: 1,
         image: product.photoUrl,
       },
     ]);
@@ -106,7 +107,7 @@ export default function ClientHomePage() {
     commitCartItems(
       cartItems.map((item) =>
         item.name === itemToIncrease.name
-          ? { ...item, qty: item.qty + 1 }
+          ? { ...item, quantity: item.quantity + 1 }
           : item,
       ),
     );
@@ -117,16 +118,42 @@ export default function ClientHomePage() {
       cartItems
         .map((item) =>
           item.name === itemToDecrease.name
-            ? { ...item, qty: item.qty - 1 }
+            ? { ...item, quantity: item.quantity - 1 }
             : item,
         )
-        .filter((item) => item.qty > 0),
+        .filter((item) => item.quantity > 0),
     );
   }
 
   function removeCartItem(itemToRemove: CartItem) {
     commitCartItems(cartItems.filter((item) => item.name !== itemToRemove.name));
   }
+
+  const placeOrder = useCallback(async () => {
+    if (!clientId || cartItems.length === 0) {
+      throw new Error("Cannot place order");
+    }
+
+    const response = await fetch("/api/orders", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        clientId,
+        items: cartItems.map((item) => ({
+          productId: item.productId,
+          quantity: item.quantity,
+        })),
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to submit order");
+    }
+
+    commitCartItems([]);
+  }, [cartItems, clientId]);
 
   useEffect(() => {
     if (!username || !clientId) {
@@ -209,6 +236,7 @@ export default function ClientHomePage() {
         onDecreaseItem={decreaseCartItem}
         onRemoveItem={removeCartItem}
         onSyncCartFromStorage={syncCartFromStorage}
+        onPlaceOrder={placeOrder}
       />
 
       <BottomNavigation activeTab="catalog" />

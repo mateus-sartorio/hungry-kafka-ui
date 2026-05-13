@@ -8,7 +8,7 @@ import { AccountSettingsFormCard } from "./account-settings-form-card";
 import { AccountSettingsHeader } from "./account-settings-header";
 import {
   createStoredClientId,
-  readStoredClientId,
+  updateStoredClientName,
   writeStoredUsername,
 } from "../user-config";
 import { useClientIdentity } from "../use-client-identity";
@@ -17,7 +17,7 @@ const FIRST_USERNAME_DEFAULT = "john doe";
 
 export default function ClientSettingsPage() {
   const router = useRouter();
-  const { username } = useClientIdentity();
+  const { username, clientId } = useClientIdentity();
   const [usernameInput, setUsernameInput] = useState("");
   const [hasEditedUsername, setHasEditedUsername] = useState(false);
 
@@ -25,13 +25,17 @@ export default function ClientSettingsPage() {
     ? usernameInput
     : username || FIRST_USERNAME_DEFAULT;
 
+  const submitLabel = clientId ? "Update Client" : "Create Profile";
+
   const onSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     const submit = async () => {
       const nextName = (hasEditedUsername ? usernameInput : username).trim() || FIRST_USERNAME_DEFAULT;
 
-      if (!readStoredClientId()) {
+      if (clientId) {
+        await updateStoredClientName(clientId, nextName);
+      } else {
         await createStoredClientId(nextName);
       }
 
@@ -57,6 +61,7 @@ export default function ClientSettingsPage() {
 
           <AccountSettingsFormCard
             usernameInput={displayedUsername}
+            submitLabel={submitLabel}
             onUsernameInputChange={handleUsernameInputChange}
             onSubmit={onSubmit}
           />

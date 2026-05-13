@@ -2,71 +2,181 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { readStoredUsername } from "../../user-config";
 import { ClientHeader } from "../../components/client-header";
+import { useClientIdentity } from "../../use-client-identity";
+import { formatElapsed, formatOrderCode, formatUsd } from "../order-format";
+import {
+  parseOrderIdFromRouteSegment,
+  readPersistedOrder,
+} from "../order-detail-storage";
+import type { OrderResponse } from "../order-types";
 import { OrderStatusCard } from "./order-status-card";
 import { OrderWarningCard } from "./order-warning-card";
 import { OrderTotalSummary } from "./order-total-summary";
 import { ProductDetails } from "./product-details";
 
-const orderItems = [
-  {
-    name: "Neon Classic Burger",
-    price: "$14.00",
-    image:
-      "https://lh3.googleusercontent.com/aida-public/AB6AXuCDbHUeYAff6bn4hzravzGnV6cihd4S7WCLKVWa_ZxdxK_Jx5mXLb4Ld-Zcw2ik3_5AE3NONQX55FiuVHr-osSd7HW3L2KALx4xWsmZsFOpwRd1KbwL1C0tRQjKw5NvJNh2jmydPtZiQNkm-evgDOdQB_zN8xTa2CPhuCbDgDolx3Ejah2lt1GJ0GkFm4GQlTQP5THleOsj7xDDq7yIrg10RWyettsgEDUpt0eyMRCeHyhsP-sPXPTX2608rYbixq4Epg6_Qgg-Jg",
-  },
-  {
-    name: "Truffle Dust Fries",
-    price: "$8.00",
-    image:
-      "https://lh3.googleusercontent.com/aida-public/AB6AXuDNoMI65Hr9vxe9eq3URj9T6jT4spuIdxET4m4waqW-HSKB8uIj9ZA-sJXx7cZrcKiS83DHN0FjET3rxLLn_GNQp9gG65UDxgiRaiHb98TTFAETyoFKi8wNHl2lcwovI6EG3RGTRbciO3kOrtvaFdRwUIjfSDynxVQPCfBVC1c-rx2GkYvDJEitpCCvQcT0-mtyRxnzjaJTJBpnuxL3J1suwadqEHXMY5g3qULbNaXjSmVtRGsIVBL6JcaZ5YCvDU8ORmcFkkVbnw",
-  },
-  {
-    name: "Cyber Matcha Iced",
-    price: "$6.50",
-    image:
-      "https://lh3.googleusercontent.com/aida-public/AB6AXuBtox-30qiZCIQ9NFFuNUkQjc4CERb45PjVgcvbIhxWy2RYDlKX0tOSxYDuI84kXO5uk7O-y60D1GiyOTEAGvYfuBxn6Y1UR3QQaMgYSOluJS4161N-Ed17_KjnsaZO_gZfZRX80wSV0D_i6w8NE-YtT0GYGlsb7LfTQclez7LkMfpyoD6Scd-LpJ6Cvkb0dSnAqNXi0mUvlcBU3DjcH6Y8bWKapf6iriGjlgLsty3JZM_bkggnlJrEiM5k6SDpaUq8V2f8ksRlJg",
-  },
-];
+async function fetchClientOrders(clientId: number): Promise<OrderResponse[]> {
+  const response = await fetch(`http://localhost:8080/api/orders/client/${clientId}`);
+
+  if (!response.ok) {
+    throw new Error("Failed to load orders");
+  }
+
+  return (await response.json()) as OrderResponse[];
+}
 
 export default function OrderDetailsPage() {
   const router = useRouter();
   const params = useParams<{ orderId: string }>();
-  const [username] = useState(() => readStoredUsername());
-  const orderCode = useMemo(() => params.orderId.toUpperCase(), [params.orderId]);
+  const { username, clientId } = useClientIdentity();
+  const [order, setOrder] = useState<OrderResponse | null>(null);
+  const [isReady, setIsReady] = useState(false);
+  const [hasError, setHasError] = useState(false);
+
+  const routeOrderSegment = useMemo(() => {
+    const raw = params.orderId;
+    return (Array.isArray(raw) ? raw[0] : raw) ?? "";
+  }, [params.orderId]);
+
+  const numericOrderId = useMemo(
+    () => parseOrderIdFromRouteSegment(routeOrderSegment),
+    [routeOrderSegment],
+  );
 
   useEffect(() => {
-    if (!username) {
+    if (!username || !clientId) {
       router.replace("/client/settings");
     }
-  }, [router, username]);
+  }, [clientId, router, username]);
+
+  useEffect(() => {
+    if (numericOrderId === null) {
+      setOrder(null);
+      setHasError(false);
+      setIsReady(true);
+      return;
+    }
+
+    if (!clientId || !username) {
+      return;
+    }
+
+    const orderId = numericOrderId;
+    const cid = clientId;
+
+    let isActive = true;
+
+    setIsReady(false);
+    setHasError(false);
+
+    async function resolveOrder() {
+      const cached = readPersistedOrder(orderId);
+
+      if (
+        cached &&
+        cached.clientId === cid &&
+        cached.id === orderId
+      ) {
+        if (isActive) {
+          setOrder(cached);
+          setHasError(false);
+          setIsReady(true);
+        }
+
+        return;
+      }
+
+      try {
+        const orders = await fetchClientOrders(cid);
+        const found = orders.find((o) => o.id === orderId);
+
+        if (!found || found.clientId !== cid) {
+          throw new Error("Order not found");
+        }
+
+        if (isActive) {
+          setOrder(found);
+          setHasError(false);
+          setIsReady(true);
+        }
+      } catch {
+        if (isActive) {
+          setOrder(null);
+          setHasError(true);
+          setIsReady(true);
+        }
+      }
+    }
+
+    void resolveOrder();
+
+    return () => {
+      isActive = false;
+    };
+  }, [clientId, numericOrderId, username]);
 
   if (!username) {
     return null;
   }
+
+  if (numericOrderId === null) {
+    return (
+      <div className="min-h-screen bg-[#f7faf8] text-[#181c1b]">
+        <ClientHeader username={username} backHref="/client/orders" />
+
+        <main className="mx-auto max-w-3xl px-6 py-24">
+          <p className="text-sm text-red-500">Invalid order link.</p>
+        </main>
+      </div>
+    );
+  }
+
+  const orderCode = formatOrderCode(numericOrderId);
 
   return (
     <div className="min-h-screen bg-[#f7faf8] text-[#181c1b]">
       <ClientHeader username={username} backHref="/client/orders" />
 
       <main className="mx-auto max-w-3xl px-6 py-24">
-        <OrderStatusCard orderCode={orderCode} />
-
-        <OrderWarningCard />
-
-        <div className="mb-12 space-y-6">
-          {orderItems.map((item) => (
-            <ProductDetails
-              key={item.name}
-              name={item.name}
-              price={item.price}
-              image={item.image}
+        {!isReady ? (
+          <p className="text-sm text-[#737a61]">Loading order...</p>
+        ) : hasError || !order ? (
+          <p className="text-sm text-red-500">We could not load this order.</p>
+        ) : (
+          <>
+            <OrderStatusCard
+              orderCode={orderCode}
+              status={order.status}
+              estimate={`Placed ${formatElapsed(order.createdAt)} ago`}
             />
-          ))}
-        </div>
 
-        <OrderTotalSummary amount="$28.50" />
+            <OrderWarningCard />
+
+            <div className="mb-12 space-y-6">
+              {order.items.map((line, index) => (
+                <ProductDetails
+                  key={`${line.product.id}-${index}`}
+                  name={
+                    line.amount > 1
+                      ? `${line.product.name} × ${line.amount}`
+                      : line.product.name
+                  }
+                  price={formatUsd(line.product.price * line.amount)}
+                  image={line.product.photo}
+                />
+              ))}
+            </div>
+
+            <OrderTotalSummary
+              amount={formatUsd(
+                order.items.reduce(
+                  (sum, line) => sum + line.product.price * line.amount,
+                  0,
+                ),
+              )}
+            />
+          </>
+        )}
       </main>
     </div>
   );

@@ -76,6 +76,23 @@ export async function createStoredClientId(clientName: string): Promise<number> 
   return nextClientId;
 }
 
+export async function updateStoredClientName(
+  clientId: number,
+  clientName: string,
+): Promise<void> {
+  const response = await fetch(`/api/clients/${clientId}`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ name: clientName.trim() }),
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to update client");
+  }
+}
+
 export type ClientIdentity = {
   username: string;
   clientId: number | null;

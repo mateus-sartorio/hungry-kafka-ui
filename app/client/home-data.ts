@@ -11,9 +11,10 @@ export type CatalogItem = {
 };
 
 export type CartItem = {
+  productId: number;
   name: string;
   unitPrice: number;
-  qty: number;
+  quantity: number;
   image: string;
 };
 
@@ -55,13 +56,15 @@ export function readStoredCartItems(): CartItem[] {
       return (
         typeof item === "object" &&
         item !== null &&
+        "productId" in item &&
         "name" in item &&
         "unitPrice" in item &&
-        "qty" in item &&
+        "quantity" in item &&
         "image" in item &&
+        typeof item.productId === "number" &&
         typeof item.name === "string" &&
         typeof item.unitPrice === "number" &&
-        typeof item.qty === "number" &&
+        typeof item.quantity === "number" &&
         typeof item.image === "string"
       );
     });

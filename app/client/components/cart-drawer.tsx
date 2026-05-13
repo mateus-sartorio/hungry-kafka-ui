@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
 import { FaArrowRight, FaMinus, FaPlus, FaShoppingBag, FaTimes } from "react-icons/fa";
-import type { CartItem } from "../home-data";
+import { type CartItem } from "../home-data";
 
 type CartDrawerProps = {
   items: CartItem[];
@@ -13,6 +13,7 @@ type CartDrawerProps = {
   onDecreaseItem: (item: CartItem) => void;
   onRemoveItem: (item: CartItem) => void;
   onSyncCartFromStorage: () => void;
+  onPlaceOrder: () => Promise<void>;
 };
 
 export function CartDrawer({
@@ -23,10 +24,13 @@ export function CartDrawer({
   onDecreaseItem,
   onRemoveItem,
   onSyncCartFromStorage,
+  onPlaceOrder,
 }: CartDrawerProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [isSubmittingOrder, setIsSubmittingOrder] = useState(false);
+  const [orderError, setOrderError] = useState("");
   const itemCount = useMemo(
-    () => items.reduce((sum, item) => sum + item.qty, 0),
+    () => items.reduce((sum, item) => sum + item.quantity, 0),
     [items],
   );
 
@@ -49,6 +53,24 @@ export function CartDrawer({
       window.removeEventListener("storage", handleStorageChange);
     };
   }, [onSyncCartFromStorage]);
+
+  async function handleCheckout() {
+    if (items.length === 0) {
+      return;
+    }
+
+    setIsSubmittingOrder(true);
+    setOrderError("");
+
+    try {
+      await onPlaceOrder();
+      onSyncCartFromStorage();
+    } catch {
+      setOrderError("We could not submit your order right now.");
+    } finally {
+      setIsSubmittingOrder(false);
+    }
+  }
 
   return (
     <>
@@ -111,7 +133,7 @@ export function CartDrawer({
                       <div className="mb-3 flex items-start justify-between gap-3">
                         <h3 className="text-base font-bold leading-tight">{item.name}</h3>
                         <span className="whitespace-nowrap font-semibold text-zinc-900">
-                          {formatUsd(item.qty * item.unitPrice)}
+                          {formatUsd(item.quantity * item.unitPrice)}
                         </span>
                       </div>
                       <div className="flex items-center gap-3">
@@ -124,7 +146,7 @@ export function CartDrawer({
                           >
                             <FaMinus className="h-3 w-3" />
                           </button>
-                          <span className="w-6 text-center text-sm font-semibold">{item.qty}</span>
+                          <span className="w-6 text-center text-sm font-semibold">{item.quantity}</span>
                           <button
                             type="button"
                             onClick={() => onIncreaseItem(item)}
@@ -156,11 +178,13 @@ export function CartDrawer({
               <button
                 type="button"
                 disabled={items.length === 0}
+                onClick={() => void handleCheckout()}
                 className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[#c8f53c] py-4 text-lg font-bold text-zinc-900 shadow-[0_4px_14px_0_rgba(200,245,60,0.39)] transition hover:bg-[#b0d934] active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-zinc-200 disabled:text-zinc-500 disabled:shadow-none"
               >
-                Checkout Now
+                {isSubmittingOrder ? "Submitting..." : "Checkout Now"}
                 <FaArrowRight aria-hidden="true" className="h-4 w-4" />
               </button>
+              {orderError ? <p className="mt-3 text-sm text-red-500">{orderError}</p> : null}
             </footer>
           </section>
         </>

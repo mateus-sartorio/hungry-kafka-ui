@@ -2,12 +2,14 @@ import type { FormEvent } from "react";
 
 type AccountSettingsFormCardProps = {
   usernameInput: string;
+  submitLabel: string;
   onUsernameInputChange: (value: string) => void;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
 };
 
 export function AccountSettingsFormCard({
   usernameInput,
+  submitLabel,
   onUsernameInputChange,
   onSubmit,
 }: AccountSettingsFormCardProps) {
@@ -32,7 +34,7 @@ export function AccountSettingsFormCard({
           type="submit"
           className="w-full bg-[#c1ff00] px-6 py-4 text-sm font-bold italic uppercase tracking-wider text-[#567300] transition-colors hover:bg-[#baf600] active:scale-[0.98]"
         >
-          Update Profile
+          {submitLabel}
         </button>
       </form>
     </div>

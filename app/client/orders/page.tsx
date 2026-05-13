@@ -3,26 +3,66 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { BottomNavigation } from "../components/bottom-navigation";
-import { readStoredUsername } from "../user-config";
+import { useClientIdentity } from "../use-client-identity";
 import { ClientHeader } from "../components/client-header";
 import { OrderItem } from "../components/order-item";
-
-const orders = [
-  { code: "TXN-00142", time: "4.2 min", status: "In Preparation" },
-  { code: "TXN-00143", time: "12.8 min", status: "Queued" },
-  { code: "TXN-00144", time: "2.1 min", status: "Dispatching" },
-  { code: "TXN-00145", time: "8.5 min", status: "In Preparation" },
-];
+import { formatElapsed, formatOrderCode } from "./order-format";
+import type { OrderResponse } from "./order-types";
 
 export default function ClientOrdersPage() {
   const router = useRouter();
-  const [username] = useState(() => readStoredUsername());
+  const { username, clientId } = useClientIdentity();
+  const [orders, setOrders] = useState<OrderResponse[]>([]);
+  const [isLoadingOrders, setIsLoadingOrders] = useState(false);
+  const [hasLoadError, setHasLoadError] = useState(false);
 
   useEffect(() => {
-    if (!username) {
+    if (!username || !clientId) {
       router.replace("/client/settings");
     }
-  }, [router, username]);
+  }, [clientId, router, username]);
+
+  useEffect(() => {
+    if (!clientId) {
+      return;
+    }
+
+    let isActive = true;
+
+    async function loadOrders() {
+      setIsLoadingOrders(true);
+      setHasLoadError(false);
+
+      try {
+        const response = await fetch(`http://localhost:8080/api/orders/client/${clientId}`);
+
+        if (!response.ok) {
+          throw new Error("Failed to load client orders");
+        }
+
+        const data = (await response.json()) as OrderResponse[];
+
+        if (isActive) {
+          setOrders(data);
+        }
+      } catch {
+        if (isActive) {
+          setOrders([]);
+          setHasLoadError(true);
+        }
+      } finally {
+        if (isActive) {
+          setIsLoadingOrders(false);
+        }
+      }
+    }
+
+    void loadOrders();
+
+    return () => {
+      isActive = false;
+    };
+  }, [clientId]);
 
   if (!username) {
     return null;
@@ -38,17 +78,26 @@ export default function ClientOrdersPage() {
             <h2 className="text-xl font-bold">Orders</h2>
           </div>
 
-          <div className="overflow-hidden rounded-sm bg-white shadow-sm">
-            {orders.map((order, index) => (
-              <OrderItem
-                key={order.code}
-                code={order.code}
-                time={order.time}
-                status={order.status}
-                isLast={index === orders.length - 1}
-              />
-            ))}
-          </div>
+          {isLoadingOrders ? (
+            <p className="text-sm text-[#737a61]">Loading orders...</p>
+          ) : hasLoadError ? (
+            <p className="text-sm text-red-500">We could not load your orders right now.</p>
+          ) : orders.length === 0 ? (
+            <p className="text-sm text-[#737a61]">You have no orders yet.</p>
+          ) : (
+            <div className="overflow-hidden rounded-sm bg-white shadow-sm">
+              {orders.map((order, index) => (
+                <OrderItem
+                  key={order.id}
+                  order={order}
+                  code={formatOrderCode(order.id)}
+                  time={formatElapsed(order.createdAt)}
+                  status={order.status}
+                  isLast={index === orders.length - 1}
+                />
+              ))}
+            </div>
+          )}
         </section>
       </main>
 

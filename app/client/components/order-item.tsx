@@ -1,6 +1,9 @@
 import Link from "next/link";
+import type { OrderResponse } from "../orders/order-types";
+import { persistOrderForDetailRoute } from "../orders/order-detail-storage";
 
 type OrderItemProps = {
+  order: OrderResponse;
   code: string;
   time: string;
   status: string;
@@ -17,10 +20,11 @@ function statusClasses(status: string) {
   return "bg-[#e0e3e1] text-[#737a61]";
 }
 
-export function OrderItem({ code, time, status, isLast }: OrderItemProps) {
+export function OrderItem({ order, code, time, status, isLast }: OrderItemProps) {
   return (
     <Link
       href={`/client/orders/${code.toLowerCase()}`}
+      onClick={() => persistOrderForDetailRoute(order)}
       className={`flex items-center justify-between p-4 transition-colors duration-200 hover:bg-[#f1f4f2] ${
         !isLast ? "border-b border-[#c3caac]/20" : ""
       }`}
