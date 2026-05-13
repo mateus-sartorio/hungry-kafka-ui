@@ -6,7 +6,11 @@ import { BottomNavigation } from "../components/bottom-navigation";
 import { ClientHeader } from "../components/client-header";
 import { AccountSettingsFormCard } from "./account-settings-form-card";
 import { AccountSettingsHeader } from "./account-settings-header";
-import { ensureStoredClientId, writeStoredUsername } from "../user-config";
+import {
+  createStoredClientId,
+  readStoredClientId,
+  writeStoredUsername,
+} from "../user-config";
 import { useClientIdentity } from "../use-client-identity";
 
 const FIRST_USERNAME_DEFAULT = "john doe";
@@ -23,10 +27,19 @@ export default function ClientSettingsPage() {
 
   const onSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const nextName = (hasEditedUsername ? usernameInput : username).trim() || FIRST_USERNAME_DEFAULT;
-    ensureStoredClientId();
-    writeStoredUsername(nextName);
-    router.push("/");
+
+    const submit = async () => {
+      const nextName = (hasEditedUsername ? usernameInput : username).trim() || FIRST_USERNAME_DEFAULT;
+
+      if (!readStoredClientId()) {
+        await createStoredClientId(nextName);
+      }
+
+      writeStoredUsername(nextName);
+      router.push("/");
+    };
+
+    void submit();
   };
 
   function handleUsernameInputChange(value: string) {

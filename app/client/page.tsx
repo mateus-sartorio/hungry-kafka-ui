@@ -129,10 +129,10 @@ export default function ClientHomePage() {
   }
 
   useEffect(() => {
-    if (!username) {
+    if (!username || !clientId) {
       router.replace("/client/settings");
     }
-  }, [router, username]);
+  }, [clientId, router, username]);
 
   useEffect(() => {
     if (!clientId) {

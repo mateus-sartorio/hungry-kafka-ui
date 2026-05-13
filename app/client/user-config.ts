@@ -20,46 +20,34 @@ export function writeStoredUsername(username: string) {
   window.dispatchEvent(new Event(CLIENT_STORAGE_CHANGE_EVENT));
 }
 
-export function readStoredClientId(): string {
+export function readStoredClientId(): number | null {
   if (typeof window === "undefined") {
-    return "";
+    return null;
   }
 
-  return localStorage.getItem(CLIENT_ID_STORAGE_KEY)?.trim() ?? "";
+  const storedClientId = localStorage.getItem(CLIENT_ID_STORAGE_KEY)?.trim();
+
+  if (!storedClientId) {
+    return null;
+  }
+
+  const parsedClientId = Number(storedClientId);
+
+  return Number.isInteger(parsedClientId) && parsedClientId > 0 ? parsedClientId : null;
 }
 
-function generateUuidV4(): string {
-  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
-    return crypto.randomUUID();
+export function writeStoredClientId(clientId: number) {
+  if (typeof window === "undefined") {
+    return;
   }
 
-  const bytes = new Uint8Array(16);
-
-  if (typeof crypto !== "undefined" && typeof crypto.getRandomValues === "function") {
-    crypto.getRandomValues(bytes);
-  } else {
-    for (let index = 0; index < bytes.length; index += 1) {
-      bytes[index] = Math.floor(Math.random() * 256);
-    }
-  }
-
-  bytes[6] = (bytes[6] & 0x0f) | 0x40;
-  bytes[8] = (bytes[8] & 0x3f) | 0x80;
-
-  const hex = Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0"));
-
-  return [
-    hex.slice(0, 4).join(""),
-    hex.slice(4, 6).join(""),
-    hex.slice(6, 8).join(""),
-    hex.slice(8, 10).join(""),
-    hex.slice(10, 16).join(""),
-  ].join("-");
+  localStorage.setItem(CLIENT_ID_STORAGE_KEY, String(clientId));
+  window.dispatchEvent(new Event(CLIENT_STORAGE_CHANGE_EVENT));
 }
 
-export function ensureStoredClientId(): string {
+export async function createStoredClientId(clientName: string): Promise<number> {
   if (typeof window === "undefined") {
-    return "";
+    return 0;
   }
 
   const existingClientId = readStoredClientId();
@@ -68,17 +56,29 @@ export function ensureStoredClientId(): string {
     return existingClientId;
   }
 
-  const nextClientId = generateUuidV4();
+  const response = await fetch("/api/clients", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ name: clientName.trim() }),
+  });
 
-  localStorage.setItem(CLIENT_ID_STORAGE_KEY, nextClientId);
-  window.dispatchEvent(new Event(CLIENT_STORAGE_CHANGE_EVENT));
+  if (!response.ok) {
+    throw new Error("Failed to create client");
+  }
+
+  const createdClient = (await response.json()) as { id: number };
+  const nextClientId = createdClient.id;
+
+  writeStoredClientId(nextClientId);
 
   return nextClientId;
 }
 
 export type ClientIdentity = {
   username: string;
-  clientId: string;
+  clientId: number | null;
 };
 
 export function readStoredClientIdentity(): ClientIdentity {
