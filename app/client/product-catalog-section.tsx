@@ -1,11 +1,11 @@
 "use client";
 
 import { ProductCard } from "./components/product-card";
-import type { ClientHomeData } from "./home-data";
+import type { CatalogItem } from "./home-data";
 
 type ProductCatalogSectionProps = {
-  products: ClientHomeData["products"];
-  onAddProduct: (product: ClientHomeData["products"][number]) => void;
+  products: CatalogItem[];
+  onAddProduct: (product: CatalogItem) => void;
 };
 
 export function ProductCatalogSection({ products, onAddProduct }: ProductCatalogSectionProps) {
@@ -19,8 +19,8 @@ export function ProductCatalogSection({ products, onAddProduct }: ProductCatalog
       <div className="mt-8 grid grid-cols-1 gap-8 md:grid-cols-12">
         {products.map((product) => (
           <ProductCard
-            key={product.name}
-            {...product}
+            key={product.id}
+            product={product}
             onAdd={() => onAddProduct(product)}
           />
         ))}

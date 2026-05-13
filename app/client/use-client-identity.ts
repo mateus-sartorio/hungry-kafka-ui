@@ -1,10 +1,11 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 import {
   clientStorageChangeEventName,
   CLIENT_ID_STORAGE_KEY,
   USERNAME_STORAGE_KEY,
+  ensureStoredClientId,
   readStoredClientIdentity,
 } from "./user-config";
 
@@ -43,6 +44,10 @@ function subscribe(onStoreChange: () => void) {
 }
 
 export function useClientIdentity() {
+  useEffect(() => {
+    ensureStoredClientId();
+  }, []);
+
   const snapshot = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 
   return JSON.parse(snapshot) as {

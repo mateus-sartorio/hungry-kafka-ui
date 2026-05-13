@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import { BottomNavigation } from "./components/bottom-navigation";
-import { readStoredUsername } from "./user-config";
+import { useClientIdentity } from "./use-client-identity";
 import { CartDrawer } from "./components/cart-drawer";
 import { ClientHeader } from "./components/client-header";
 import { LiveOrder } from "./components/live-order";
@@ -12,9 +12,8 @@ import {
   CART_STORAGE_KEY,
   readStoredCartItems,
   writeStoredCartItems,
-  type ClientHomeData,
   type CatalogItem,
-  CartItem,
+  type CartItem,
 } from "./home-data";
 
 function formatUsd(value: number) {
@@ -54,8 +53,9 @@ function subscribeToCartChanges(onStoreChange: () => void) {
 
 export default function ClientHomePage() {
   const router = useRouter();
-  const [username] = useState(() => readStoredUsername());
-  const [homeData, setHomeData] = useState<ClientHomeData | null>(null);
+  const { username, clientId } = useClientIdentity();
+  const [products, setProducts] = useState<CatalogItem[]>([]);
+  const [isLoadingProducts, setIsLoadingProducts] = useState(false);
   const cartItems = useSyncExternalStore(subscribeToCartChanges, getCartSnapshot, () => []);
   const syncCartFromStorage = useCallback(() => {
     window.dispatchEvent(new Event(CART_CHANGE_EVENT));
@@ -95,9 +95,9 @@ export default function ClientHomePage() {
       ...cartItems,
       {
         name: product.name,
-        unitPrice: product.unitPrice,
+        unitPrice: product.price,
         qty: 1,
-        image: product.image,
+        image: product.photoUrl,
       },
     ]);
   }
@@ -135,32 +135,44 @@ export default function ClientHomePage() {
   }, [router, username]);
 
   useEffect(() => {
+    if (!clientId) {
+      return;
+    }
+
     let isActive = true;
 
-    async function loadHomeData() {
-      const response = await fetch("/api/client/home");
+    async function loadProducts() {
+      setIsLoadingProducts(true);
 
-      if (!response.ok) {
-        throw new Error("Failed to load client home data");
-      }
+      try {
+        const response = await fetch(`http://localhost:8080/products/${clientId}`);
 
-      const data = (await response.json()) as ClientHomeData;
+        if (!response.ok) {
+          throw new Error("Failed to load client products");
+        }
 
-      if (isActive) {
-        setHomeData(data);
+        const data = (await response.json()) as CatalogItem[];
+
+        if (isActive) {
+          setProducts(data);
+        }
+      } catch {
+        if (isActive) {
+          setProducts([]);
+        }
+      } finally {
+        if (isActive) {
+          setIsLoadingProducts(false);
+        }
       }
     }
 
-    void loadHomeData().catch(() => {
-      if (isActive) {
-        setHomeData({ products: [], cartItems: [] });
-      }
-    });
+    void loadProducts();
 
     return () => {
       isActive = false;
     };
-  }, []);
+  }, [clientId]);
 
   if (!username) {
     return null;
@@ -182,10 +194,11 @@ export default function ClientHomePage() {
           ]}
         />
 
-        <ProductCatalogSection
-          products={homeData?.products ?? []}
-          onAddProduct={addProductToCart}
-        />
+        <ProductCatalogSection products={products} onAddProduct={addProductToCart} />
+
+        {isLoadingProducts ? (
+          <p className="mt-6 text-sm text-[#737a61]">Loading products...</p>
+        ) : null}
       </main>
 
       <CartDrawer
