@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { BottomNavigation } from "../components/bottom-navigation";
 import { useClientIdentity } from "../use-client-identity";
+import { readStoredUsername, readStoredClientId } from "../user-config";
 import { ClientHeader } from "../components/client-header";
 import { OrderDetailsCard } from "../../components/order-details-card";
 import { useClientOrders } from "../use-client-orders";
@@ -12,15 +13,27 @@ import { formatOrderCode, formatStatus, formatUsd, formatItemsLabel, sumOrderTot
 export default function ClientOrdersPage() {
   const router = useRouter();
   const { username, clientId } = useClientIdentity();
+  const [isAuthChecked, setIsAuthChecked] = useState(false);
   const { orders, isLoading: isLoadingOrders, hasError: hasLoadError } = useClientOrders();
 
+  const sortedOrders = useMemo(() => {
+    return [...orders].sort((a, b) => {
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    });
+  }, [orders]);
+
   useEffect(() => {
-    if (!username || !clientId) {
+    const storedUsername = readStoredUsername();
+    const storedClientId = readStoredClientId();
+
+    if (!storedUsername || !storedClientId) {
       router.replace("/client/settings");
     }
-  }, [clientId, router, username]);
 
-  if (!username) {
+    setIsAuthChecked(true);
+  }, [router]);
+
+  if (!isAuthChecked || !username) {
     return null;
   }
 
@@ -38,11 +51,11 @@ export default function ClientOrdersPage() {
             <p className="text-sm text-[#737a61]">Loading orders...</p>
           ) : hasLoadError ? (
             <p className="text-sm text-red-500">We could not load your orders right now.</p>
-          ) : orders.length === 0 ? (
+          ) : sortedOrders.length === 0 ? (
             <p className="text-sm text-[#737a61]">You have no orders yet.</p>
           ) : (
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              {orders.map((order) => (
+              {sortedOrders.map((order) => (
                 <OrderDetailsCard
                   key={order.id}
                   href={`/client/orders/${order.id}`}

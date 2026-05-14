@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { getHomeMode } from "../home-mode";
+import { StoreOrdersProvider } from "./store-orders-provider";
 
 export default function StoreLayout({
   children,
@@ -10,5 +11,5 @@ export default function StoreLayout({
     redirect("/client");
   }
 
-  return <>{children}</>;
+  return <StoreOrdersProvider>{children}</StoreOrdersProvider>;
 }

@@ -1,0 +1,141 @@
+"use client";
+
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+import {
+  STORE_ORDERS_CHANGE_EVENT,
+  STORE_ORDERS_STORAGE_KEY,
+  readStoredStoreOrders,
+  writeStoredStoreOrders,
+} from "./store-orders-storage";
+import type { StoreOrderResponse } from "./store-order-types";
+
+type StoreOrdersContextValue = {
+  orders: StoreOrderResponse[];
+  isLoading: boolean;
+  hasError: boolean;
+  refetch: () => Promise<void>;
+};
+
+const StoreOrdersContext = createContext<StoreOrdersContextValue | null>(null);
+
+export function StoreOrdersProvider({ children }: { children: React.ReactNode }) {
+  const [orders, setOrders] = useState<StoreOrderResponse[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [hasError, setHasError] = useState(false);
+
+  const fetchOrders = useCallback(async () => {
+    setIsLoading(true);
+    setHasError(false);
+
+    try {
+      const response = await fetch("http://localhost:8080/api/orders");
+
+      if (!response.ok) {
+        throw new Error("Failed to load store orders");
+      }
+
+      const data = (await response.json()) as StoreOrderResponse[];
+      writeStoredStoreOrders(data);
+      setOrders(data);
+    } catch {
+      setHasError(true);
+      setOrders(readStoredStoreOrders());
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    setOrders(readStoredStoreOrders());
+  }, []);
+
+  useEffect(() => {
+    void fetchOrders();
+  }, [fetchOrders]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    function handleStorage(event: StorageEvent) {
+      if (event.key !== STORE_ORDERS_STORAGE_KEY) {
+        return;
+      }
+      setOrders(readStoredStoreOrders());
+    }
+
+    function handleStoreOrdersChange() {
+      setOrders(readStoredStoreOrders());
+    }
+
+    window.addEventListener("storage", handleStorage);
+    window.addEventListener(STORE_ORDERS_CHANGE_EVENT, handleStoreOrdersChange);
+
+    return () => {
+      window.removeEventListener("storage", handleStorage);
+      window.removeEventListener(STORE_ORDERS_CHANGE_EVENT, handleStoreOrdersChange);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const eventSource = new EventSource(`/api/store/orders/events`);
+
+    eventSource.onmessage = (event) => {
+      try {
+        const updatedOrder = JSON.parse(event.data) as StoreOrderResponse;
+        const currentOrders = readStoredStoreOrders();
+        const orderIndex = currentOrders.findIndex((o) => o.id === updatedOrder.id);
+        
+        let newOrders;
+        if (orderIndex >= 0) {
+          newOrders = [...currentOrders];
+          newOrders[orderIndex] = updatedOrder;
+        } else {
+          newOrders = [updatedOrder, ...currentOrders];
+        }
+        
+        writeStoredStoreOrders(newOrders);
+      } catch (err) {
+        console.error("Failed to parse order update from SSE", err);
+      }
+    };
+
+    return () => {
+      eventSource.close();
+    };
+  }, []);
+
+  const value = useMemo<StoreOrdersContextValue>(
+    () => ({
+      orders,
+      isLoading,
+      hasError,
+      refetch: fetchOrders,
+    }),
+    [orders, isLoading, hasError, fetchOrders],
+  );
+
+  return <StoreOrdersContext.Provider value={value}>{children}</StoreOrdersContext.Provider>;
+}
+
+export function useStoreOrders(): StoreOrdersContextValue {
+  const ctx = useContext(StoreOrdersContext);
+
+  if (!ctx) {
+    throw new Error("useStoreOrders must be used within a StoreOrdersProvider");
+  }
+
+  return ctx;
+}

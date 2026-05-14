@@ -104,6 +104,39 @@ export function ClientOrdersProvider({ children }: { children: React.ReactNode }
     };
   }, [clientId]);
 
+  useEffect(() => {
+    if (typeof window === "undefined" || !clientId) {
+      return;
+    }
+
+    const id = clientId;
+    const eventSource = new EventSource(`/api/client/orders/${id}/events`);
+
+    eventSource.onmessage = (event) => {
+      try {
+        const updatedOrder = JSON.parse(event.data) as OrderResponse;
+        const currentOrders = readStoredClientOrders(id);
+        const orderIndex = currentOrders.findIndex((o) => o.id === updatedOrder.id);
+        
+        let newOrders;
+        if (orderIndex >= 0) {
+          newOrders = [...currentOrders];
+          newOrders[orderIndex] = updatedOrder;
+        } else {
+          newOrders = [updatedOrder, ...currentOrders];
+        }
+        
+        writeStoredClientOrders(id, newOrders);
+      } catch (err) {
+        console.error("Failed to parse order update from SSE", err);
+      }
+    };
+
+    return () => {
+      eventSource.close();
+    };
+  }, [clientId]);
+
   const value = useMemo<ClientOrdersContextValue>(
     () => ({
       orders,

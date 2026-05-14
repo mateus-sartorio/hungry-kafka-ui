@@ -1,18 +1,23 @@
+"use client";
+
+import { useMemo } from "react";
 import { StoreHeader } from "./components/store-header";
 import { OrderDetailsCard } from "../components/order-details-card";
 import { formatItemsLabel, formatUsd, sortOrdersNewestFirst, sumOrderTotal, formatStatus } from "./store-order-format";
-import { fetchAllStoreOrders } from "./store-orders-api";
+import { useStoreOrders } from "./store-orders-provider";
 
-export default async function StoreHomePage() {
-  const { orders: rawOrders, error } = await fetchAllStoreOrders();
-  const orders = sortOrdersNewestFirst(rawOrders);
+export default function StoreHomePage() {
+  const { orders: rawOrders, hasError, isLoading } = useStoreOrders();
+  const orders = useMemo(() => sortOrdersNewestFirst(rawOrders), [rawOrders]);
 
   return (
     <div className="min-h-screen bg-[#f7faf8] pb-8 pt-16 text-[#181c1b]">
       <StoreHeader />
 
       <main className="mx-auto max-w-3xl px-4 py-8">
-        {error ? (
+        {isLoading ? (
+          <p className="text-sm text-[#737a61]">Loading orders...</p>
+        ) : hasError ? (
           <p className="text-sm text-red-500">We could not load orders from the server.</p>
         ) : orders.length === 0 ? (
           <p className="text-sm text-[#737a61]">No orders yet.</p>

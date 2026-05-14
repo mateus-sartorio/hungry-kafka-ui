@@ -81,11 +81,11 @@ export function CartDrawer({
       <div className="fixed bottom-24 right-6 z-40 md:right-10">
         <button
           onClick={() => setIsOpen(true)}
-          className="flex h-16 w-16 flex-col items-center justify-center rounded-sm bg-[#4c6700] text-white shadow-xl transition active:scale-95"
+          className="flex h-16 w-16 flex-col items-center justify-center gap-1.5 rounded-sm bg-[#4c6700] text-white shadow-xl transition active:scale-95"
           aria-label="Open cart overlay"
         >
           <FaShoppingBag className="h-5 w-5" />
-          <span className="text-[10px] font-black">{itemCount}</span>
+          <span className="text-xs font-black">{itemCount}</span>
         </button>
       </div>
 
