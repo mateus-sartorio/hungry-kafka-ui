@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { getHomeMode } from "../home-mode";
+import { ClientAppShell } from "./client-app-shell";
 
 export default function ClientLayout({
   children,
@@ -10,5 +11,5 @@ export default function ClientLayout({
     redirect("/store");
   }
 
-  return <>{children}</>;
+  return <ClientAppShell>{children}</ClientAppShell>;
 }

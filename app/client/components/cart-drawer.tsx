@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { FaArrowRight, FaMinus, FaPlus, FaShoppingBag, FaTimes } from "react-icons/fa";
 import { type CartItem } from "../home-data";
 
@@ -26,6 +27,7 @@ export function CartDrawer({
   onSyncCartFromStorage,
   onPlaceOrder,
 }: CartDrawerProps) {
+  const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [isSubmittingOrder, setIsSubmittingOrder] = useState(false);
   const [orderError, setOrderError] = useState("");
@@ -65,6 +67,8 @@ export function CartDrawer({
     try {
       await onPlaceOrder();
       onSyncCartFromStorage();
+      setIsOpen(false);
+      router.push("/client/orders");
     } catch {
       setOrderError("We could not submit your order right now.");
     } finally {

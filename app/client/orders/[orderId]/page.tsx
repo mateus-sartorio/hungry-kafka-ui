@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { ClientHeader } from "../../components/client-header";
 import { useClientIdentity } from "../../use-client-identity";
-import { formatElapsed, formatOrderCode, formatUsd } from "../order-format";
+import { useClientOrders } from "../../use-client-orders";
+import { formatElapsed, formatOrderCode, formatUsd, formatStatus } from "../order-format";
 import {
   parseOrderIdFromRouteSegment,
   readPersistedOrder,
@@ -12,26 +13,19 @@ import {
 import type { OrderResponse } from "../order-types";
 import { OrderStatusCard } from "./order-status-card";
 import { OrderWarningCard } from "./order-warning-card";
-import { OrderTotalSummary } from "./order-total-summary";
-import { ProductDetails } from "./product-details";
-
-async function fetchClientOrders(clientId: number): Promise<OrderResponse[]> {
-  const response = await fetch(`http://localhost:8080/api/orders/client/${clientId}`);
-
-  if (!response.ok) {
-    throw new Error("Failed to load orders");
-  }
-
-  return (await response.json()) as OrderResponse[];
-}
+import { OrderItemsCard } from "../../../components/order-items-card";
 
 export default function OrderDetailsPage() {
   const router = useRouter();
   const params = useParams<{ orderId: string }>();
   const { username, clientId } = useClientIdentity();
+  const { orders: clientOrders, isLoading: ordersListLoading, hasError: ordersListError, refetch } =
+    useClientOrders();
   const [order, setOrder] = useState<OrderResponse | null>(null);
   const [isReady, setIsReady] = useState(false);
   const [hasError, setHasError] = useState(false);
+  const [isMarkingDelivered, setIsMarkingDelivered] = useState(false);
+  const [deliveryError, setDeliveryError] = useState("");
 
   const routeOrderSegment = useMemo(() => {
     const raw = params.orderId;
@@ -42,6 +36,79 @@ export default function OrderDetailsPage() {
     () => parseOrderIdFromRouteSegment(routeOrderSegment),
     [routeOrderSegment],
   );
+
+  const handleMarkDelivered = useCallback(async () => {
+    if (!order || !clientId) {
+      return;
+    }
+
+    setIsMarkingDelivered(true);
+    setDeliveryError("");
+
+    try {
+      const response = await fetch("/api/orders/status-events", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          orderId: order.id,
+          status: "DELIVERED",
+          userId: String(clientId),
+          category: "ORDER_STATUS",
+        }),
+      });
+
+      if (!response.ok) {
+        const data = (await response.json().catch(() => ({}))) as { message?: string };
+        throw new Error(data.message ?? "Failed to mark order as delivered");
+      }
+
+      setOrder((prev) => (prev ? { ...prev, status: "DELIVERED" } : null));
+      await refetch();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Something went wrong";
+      setDeliveryError(message);
+    } finally {
+      setIsMarkingDelivered(false);
+    }
+  }, [order, clientId, refetch]);
+
+  const handleHeaderBack = useCallback(() => {
+    router.back();
+  }, [router]);
+
+  const isExpectedDeliveryInFuture = useMemo(() => {
+    if (!order || order.status !== "OUT_FOR_DELIVERY" || !order.expectedDelivery) {
+      return false;
+    }
+
+    try {
+      // Parse ISO 8601 duration (e.g., "PT15M", "PT1H30M")
+      const durationRegex = /^PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+(?:\.\d+)?)S)?$/;
+      const match = durationRegex.exec(order.expectedDelivery);
+
+      if (!match) {
+        return false;
+      }
+
+      const hours = parseInt(match[1] || "0", 10);
+      const minutes = parseInt(match[2] || "0", 10);
+      const seconds = parseFloat(match[3] || "0");
+
+      // Calculate total milliseconds
+      const durationMs = (hours * 3600 + minutes * 60 + seconds) * 1000;
+
+      // Calculate expected delivery time
+      const orderTime = new Date(order.createdAt).getTime();
+      const expectedDeliveryTime = orderTime + durationMs;
+
+      // Compare with current time
+      return expectedDeliveryTime > Date.now();
+    } catch {
+      return false;
+    }
+  }, [order]);
 
   useEffect(() => {
     if (!username || !clientId) {
@@ -64,56 +131,47 @@ export default function OrderDetailsPage() {
     const orderId = numericOrderId;
     const cid = clientId;
 
-    let isActive = true;
+    const cached = readPersistedOrder(orderId);
 
-    setIsReady(false);
-    setHasError(false);
-
-    async function resolveOrder() {
-      const cached = readPersistedOrder(orderId);
-
-      if (
-        cached &&
-        cached.clientId === cid &&
-        cached.id === orderId
-      ) {
-        if (isActive) {
-          setOrder(cached);
-          setHasError(false);
-          setIsReady(true);
-        }
-
-        return;
-      }
-
-      try {
-        const orders = await fetchClientOrders(cid);
-        const found = orders.find((o) => o.id === orderId);
-
-        if (!found || found.clientId !== cid) {
-          throw new Error("Order not found");
-        }
-
-        if (isActive) {
-          setOrder(found);
-          setHasError(false);
-          setIsReady(true);
-        }
-      } catch {
-        if (isActive) {
-          setOrder(null);
-          setHasError(true);
-          setIsReady(true);
-        }
-      }
+    if (cached && cached.clientId === cid && cached.id === orderId) {
+      setOrder(cached);
+      setHasError(false);
+      setIsReady(true);
+      return;
     }
 
-    void resolveOrder();
+    if (ordersListLoading) {
+      setIsReady(false);
+      return;
+    }
 
-    return () => {
-      isActive = false;
-    };
-  }, [clientId, numericOrderId, username]);
+    if (ordersListError && clientOrders.length === 0) {
+      setOrder(null);
+      setHasError(true);
+      setIsReady(true);
+      return;
+    }
+
+    const found = clientOrders.find((o) => o.id === orderId && o.clientId === cid);
+
+    if (found) {
+      setOrder(found);
+      setHasError(false);
+      setIsReady(true);
+      return;
+    }
+
+    setOrder(null);
+    setHasError(true);
+    setIsReady(true);
+  }, [
+    clientId,
+    clientOrders,
+    numericOrderId,
+    ordersListError,
+    ordersListLoading,
+    username,
+  ]);
 
   if (!username) {
     return null;
@@ -122,7 +180,7 @@ export default function OrderDetailsPage() {
   if (numericOrderId === null) {
     return (
       <div className="min-h-screen bg-[#f7faf8] text-[#181c1b]">
-        <ClientHeader username={username} backHref="/client/orders" />
+        <ClientHeader username={username} onBack={handleHeaderBack} />
 
         <main className="mx-auto max-w-3xl px-6 py-24">
           <p className="text-sm text-red-500">Invalid order link.</p>
@@ -135,7 +193,7 @@ export default function OrderDetailsPage() {
 
   return (
     <div className="min-h-screen bg-[#f7faf8] text-[#181c1b]">
-      <ClientHeader username={username} backHref="/client/orders" />
+      <ClientHeader username={username} onBack={handleHeaderBack} />
 
       <main className="mx-auto max-w-3xl px-6 py-24">
         {!isReady ? (
@@ -146,29 +204,30 @@ export default function OrderDetailsPage() {
           <>
             <OrderStatusCard
               orderCode={orderCode}
-              status={order.status}
+              status={formatStatus(order.status)}
               estimate={`Placed ${formatElapsed(order.createdAt)} ago`}
             />
 
-            <OrderWarningCard />
+            {order.status === "OUT_FOR_DELIVERY" && (
+              <div className="mb-6 mt-6">
+                <button
+                  onClick={() => void handleMarkDelivered()}
+                  disabled={isMarkingDelivered}
+                  className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[#4c6700] py-3 text-base font-bold text-white transition hover:bg-[#3a5000] active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-[#737a61]"
+                >
+                  {isMarkingDelivered ? "Marking as delivered..." : "Mark as Delivered"}
+                </button>
+                {deliveryError ? (
+                  <p className="mt-2 text-sm text-red-500">{deliveryError}</p>
+                ) : null}
+              </div>
+            )}
 
-            <div className="mb-12 space-y-6">
-              {order.items.map((line, index) => (
-                <ProductDetails
-                  key={`${line.product.id}-${index}`}
-                  name={
-                    line.amount > 1
-                      ? `${line.product.name} × ${line.amount}`
-                      : line.product.name
-                  }
-                  price={formatUsd(line.product.price * line.amount)}
-                  image={line.product.photo}
-                />
-              ))}
-            </div>
+            {isExpectedDeliveryInFuture && <OrderWarningCard />}
 
-            <OrderTotalSummary
-              amount={formatUsd(
+            <OrderItemsCard
+              items={order.items}
+              total={formatUsd(
                 order.items.reduce(
                   (sum, line) => sum + line.product.price * line.amount,
                   0,

@@ -17,4 +17,5 @@ export type OrderResponse = {
   items: OrderLineResponse[];
   createdAt: string;
   status: string;
+  expectedDelivery?: string | null;
 };

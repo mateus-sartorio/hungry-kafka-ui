@@ -1,3 +1,5 @@
+import type { OrderLineResponse } from "./order-types";
+
 export function formatElapsed(createdAt: string) {
   const createdAtMs = new Date(createdAt).getTime();
 
@@ -21,7 +23,7 @@ export function formatElapsed(createdAt: string) {
 }
 
 export function formatOrderCode(orderId: number) {
-  return `TXN-${String(orderId).padStart(5, "0")}`;
+  return `#${orderId}`;
 }
 
 export function formatUsd(value: number) {
@@ -29,4 +31,38 @@ export function formatUsd(value: number) {
     style: "currency",
     currency: "USD",
   }).format(value);
+}
+
+export function formatStatus(status: string): string {
+  return status.replace(/_/g, " ");
+}
+
+export function countLineItems(items: OrderLineResponse[] | undefined) {
+  if (!items?.length) {
+    return 0;
+  }
+
+  return items.reduce((sum, line) => sum + (Number.isFinite(line.amount) ? line.amount : 0), 0);
+}
+
+export function formatItemsLabel(items: OrderLineResponse[] | undefined) {
+  const n = countLineItems(items);
+
+  if (n === 0) {
+    return "0 Items";
+  }
+
+  return `${n} ${n === 1 ? "Item" : "Items"}`;
+}
+
+export function sumOrderTotal(items: OrderLineResponse[] | undefined) {
+  if (!items?.length) {
+    return 0;
+  }
+
+  return items.reduce((sum, line) => {
+    const price = line.product?.price ?? 0;
+    const qty = Number.isFinite(line.amount) ? line.amount : 0;
+    return sum + price * qty;
+  }, 0);
 }

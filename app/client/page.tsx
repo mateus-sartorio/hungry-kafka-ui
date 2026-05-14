@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { BottomNavigation } from "./components/bottom-navigation";
 import { useClientIdentity } from "./use-client-identity";
@@ -8,13 +8,18 @@ import { CartDrawer } from "./components/cart-drawer";
 import { ClientHeader } from "./components/client-header";
 import { LiveOrder } from "./components/live-order";
 import { ProductCatalogSection } from "./product-catalog-section";
+import type { CatalogItem } from "./home-data";
+import { readStoredUsername, readStoredClientId } from "./user-config";
+import { useClientOrders } from "./use-client-orders";
+import { useClientCart } from "./use-client-cart";
+import { persistOrderForDetailRoute } from "./orders/order-detail-storage";
+import { formatOrderCode } from "./orders/order-format";
 import {
-  CART_STORAGE_KEY,
-  readStoredCartItems,
-  writeStoredCartItems,
-  type CatalogItem,
-  type CartItem,
-} from "./home-data";
+  buildLiveOrderStages,
+  formatLiveOrderEta,
+  liveOrderProgressPercent,
+  selectLatestLiveClientOrder,
+} from "./live-order-helpers";
 
 function formatUsd(value: number) {
   return new Intl.NumberFormat("en-US", {
@@ -23,43 +28,22 @@ function formatUsd(value: number) {
   }).format(value);
 }
 
-const CART_CHANGE_EVENT = "queue-sine.client-cart-change";
-
-function getCartSnapshot() {
-  return readStoredCartItems();
-}
-
-function subscribeToCartChanges(onStoreChange: () => void) {
-  function handleStorageEvent(event: StorageEvent) {
-    if (event.key !== CART_STORAGE_KEY) {
-      return;
-    }
-
-    onStoreChange();
-  }
-
-  function handleCartChangeEvent() {
-    onStoreChange();
-  }
-
-  window.addEventListener("storage", handleStorageEvent);
-  window.addEventListener(CART_CHANGE_EVENT, handleCartChangeEvent);
-
-  return () => {
-    window.removeEventListener("storage", handleStorageEvent);
-    window.removeEventListener(CART_CHANGE_EVENT, handleCartChangeEvent);
-  };
-}
-
 export default function ClientHomePage() {
   const router = useRouter();
   const { username, clientId } = useClientIdentity();
   const [products, setProducts] = useState<CatalogItem[]>([]);
   const [isLoadingProducts, setIsLoadingProducts] = useState(false);
-  const cartItems = useSyncExternalStore(subscribeToCartChanges, getCartSnapshot, () => []);
-  const syncCartFromStorage = useCallback(() => {
-    window.dispatchEvent(new Event(CART_CHANGE_EVENT));
-  }, []);
+  const [isAuthChecked, setIsAuthChecked] = useState(false);
+  const {
+    cartItems,
+    commitCartItems,
+    addProductToCart,
+    increaseCartItem,
+    decreaseCartItem,
+    removeCartItem,
+    syncCartFromStorage,
+  } = useClientCart();
+  const { orders, refetch: refetchClientOrders } = useClientOrders();
 
   const total = useMemo(
     () =>
@@ -69,65 +53,6 @@ export default function ClientHomePage() {
       ) ?? 0,
     [cartItems],
   );
-
-  function commitCartItems(nextItems: typeof cartItems) {
-    writeStoredCartItems(nextItems);
-
-    if (typeof window !== "undefined") {
-      window.dispatchEvent(new Event(CART_CHANGE_EVENT));
-    }
-  }
-
-  function addProductToCart(product: CatalogItem) {
-    const existingItem = cartItems.find((item) => item.name === product.name);
-
-    if (existingItem) {
-      commitCartItems(
-        cartItems.map((item) =>
-          item.name === product.name ? { ...item, quantity: item.quantity + 1 } : item,
-        ),
-      );
-
-      return;
-    }
-
-    commitCartItems([
-      ...cartItems,
-      {
-        productId: product.id,
-        name: product.name,
-        unitPrice: product.price,
-        quantity: 1,
-        image: product.photoUrl,
-      },
-    ]);
-  }
-
-  function increaseCartItem(itemToIncrease: CartItem) {
-    commitCartItems(
-      cartItems.map((item) =>
-        item.name === itemToIncrease.name
-          ? { ...item, quantity: item.quantity + 1 }
-          : item,
-      ),
-    );
-  }
-
-  function decreaseCartItem(itemToDecrease: CartItem) {
-    commitCartItems(
-      cartItems
-        .map((item) =>
-          item.name === itemToDecrease.name
-            ? { ...item, quantity: item.quantity - 1 }
-            : item,
-        )
-        .filter((item) => item.quantity > 0),
-    );
-  }
-
-  function removeCartItem(itemToRemove: CartItem) {
-    commitCartItems(cartItems.filter((item) => item.name !== itemToRemove.name));
-  }
 
   const placeOrder = useCallback(async () => {
     if (!clientId || cartItems.length === 0) {
@@ -153,13 +78,20 @@ export default function ClientHomePage() {
     }
 
     commitCartItems([]);
-  }, [cartItems, clientId]);
+    await refetchClientOrders();
+  }, [cartItems, clientId, commitCartItems, refetchClientOrders]);
 
   useEffect(() => {
-    if (!username || !clientId) {
+    // Check localStorage directly first to avoid race conditions with external store sync
+    const storedUsername = readStoredUsername();
+    const storedClientId = readStoredClientId();
+
+    if (!storedUsername || !storedClientId) {
       router.replace("/client/settings");
     }
-  }, [clientId, router, username]);
+
+    setIsAuthChecked(true);
+  }, [router]);
 
   useEffect(() => {
     if (!clientId) {
@@ -201,7 +133,9 @@ export default function ClientHomePage() {
     };
   }, [clientId]);
 
-  if (!username) {
+  const liveOrder = useMemo(() => selectLatestLiveClientOrder(orders), [orders]);
+
+  if (!isAuthChecked || !username) {
     return null;
   }
 
@@ -210,16 +144,16 @@ export default function ClientHomePage() {
       <ClientHeader username={username} />
 
       <main className="mx-auto max-w-7xl px-6 pb-28 pt-20 transition-all duration-300">
-        <LiveOrder
-          orderCode="#4429"
-          eta="08:14"
-          progressPercent={75}
-          stages={[
-            { label: "Confirmed", isActive: true },
-            { label: "Preparing", isActive: true },
-            { label: "Out for delivery" },
-          ]}
-        />
+        {liveOrder ? (
+          <LiveOrder
+            href={`/client/orders/${liveOrder.id}`}
+            onBeforeNavigate={() => persistOrderForDetailRoute(liveOrder)}
+            orderCode={formatOrderCode(liveOrder.id)}
+            eta={formatLiveOrderEta(liveOrder)}
+            progressPercent={liveOrderProgressPercent(liveOrder)}
+            stages={buildLiveOrderStages(liveOrder)}
+          />
+        ) : null}
 
         <ProductCatalogSection products={products} onAddProduct={addProductToCart} />
 

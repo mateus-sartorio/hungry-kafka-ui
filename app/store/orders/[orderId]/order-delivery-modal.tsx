@@ -3,6 +3,7 @@ import { FaArrowRight, FaMinus, FaPlus, FaTruck } from "react-icons/fa";
 type OrderDeliveryModalProps = {
   isOpen: boolean;
   deliveryMinutes: number;
+  isSubmitting?: boolean;
   onDecreaseDeliveryMinutes: () => void;
   onIncreaseDeliveryMinutes: () => void;
   onConfirm: () => void;
@@ -12,6 +13,7 @@ type OrderDeliveryModalProps = {
 export function OrderDeliveryModal({
   isOpen,
   deliveryMinutes,
+  isSubmitting = false,
   onDecreaseDeliveryMinutes,
   onIncreaseDeliveryMinutes,
   onConfirm,
@@ -67,13 +69,14 @@ export function OrderDeliveryModal({
         <div className="space-y-4 p-8 pt-0">
           <button
             type="button"
-            className="group flex h-16 w-full items-center justify-between bg-[#c1ff00] px-6 transition-all hover:brightness-105 active:scale-[0.98]"
+            disabled={isSubmitting}
+            className="group flex h-16 w-full items-center justify-between bg-[#c1ff00] px-6 transition-all hover:brightness-105 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
             onClick={onConfirm}
           >
             <div className="flex items-center gap-4">
               <FaTruck className="h-4 w-4 text-[#567300]" />
               <span className="text-[12px] font-black uppercase tracking-wider text-[#567300]">
-                Confirm & Ship
+                {isSubmitting ? "Sending…" : "Confirm & Ship"}
               </span>
             </div>
             <FaArrowRight className="h-4 w-4 text-[#567300] transition-transform group-hover:translate-x-1" />

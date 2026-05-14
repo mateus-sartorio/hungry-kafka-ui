@@ -25,6 +25,8 @@ export type ClientHomeData = {
 
 export const CART_STORAGE_KEY = "queue-sine.client-cart";
 
+export const CART_CHANGE_EVENT = "queue-sine.client-cart-change";
+
 let cachedStoredCartRaw = "";
 let cachedStoredCartItems: CartItem[] = [];
 

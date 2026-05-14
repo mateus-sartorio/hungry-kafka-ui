@@ -1,68 +1,24 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { BottomNavigation } from "../components/bottom-navigation";
 import { useClientIdentity } from "../use-client-identity";
 import { ClientHeader } from "../components/client-header";
-import { OrderItem } from "../components/order-item";
-import { formatElapsed, formatOrderCode } from "./order-format";
-import type { OrderResponse } from "./order-types";
+import { OrderDetailsCard } from "../../components/order-details-card";
+import { useClientOrders } from "../use-client-orders";
+import { formatOrderCode, formatStatus, formatUsd, formatItemsLabel, sumOrderTotal } from "./order-format";
 
 export default function ClientOrdersPage() {
   const router = useRouter();
   const { username, clientId } = useClientIdentity();
-  const [orders, setOrders] = useState<OrderResponse[]>([]);
-  const [isLoadingOrders, setIsLoadingOrders] = useState(false);
-  const [hasLoadError, setHasLoadError] = useState(false);
+  const { orders, isLoading: isLoadingOrders, hasError: hasLoadError } = useClientOrders();
 
   useEffect(() => {
     if (!username || !clientId) {
       router.replace("/client/settings");
     }
   }, [clientId, router, username]);
-
-  useEffect(() => {
-    if (!clientId) {
-      return;
-    }
-
-    let isActive = true;
-
-    async function loadOrders() {
-      setIsLoadingOrders(true);
-      setHasLoadError(false);
-
-      try {
-        const response = await fetch(`http://localhost:8080/api/orders/client/${clientId}`);
-
-        if (!response.ok) {
-          throw new Error("Failed to load client orders");
-        }
-
-        const data = (await response.json()) as OrderResponse[];
-
-        if (isActive) {
-          setOrders(data);
-        }
-      } catch {
-        if (isActive) {
-          setOrders([]);
-          setHasLoadError(true);
-        }
-      } finally {
-        if (isActive) {
-          setIsLoadingOrders(false);
-        }
-      }
-    }
-
-    void loadOrders();
-
-    return () => {
-      isActive = false;
-    };
-  }, [clientId]);
 
   if (!username) {
     return null;
@@ -85,15 +41,18 @@ export default function ClientOrdersPage() {
           ) : orders.length === 0 ? (
             <p className="text-sm text-[#737a61]">You have no orders yet.</p>
           ) : (
-            <div className="overflow-hidden rounded-sm bg-white shadow-sm">
-              {orders.map((order, index) => (
-                <OrderItem
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              {orders.map((order) => (
+                <OrderDetailsCard
                   key={order.id}
-                  order={order}
-                  code={formatOrderCode(order.id)}
-                  time={formatElapsed(order.createdAt)}
-                  status={order.status}
-                  isLast={index === orders.length - 1}
+                  href={`/client/orders/${order.id}`}
+                  customer={formatOrderCode(order.id)}
+                  orderNumber={`Order #${order.id}`}
+                  status={formatStatus(order.status)}
+                  itemsLabel={formatItemsLabel(order.items)}
+                  total={formatUsd(sumOrderTotal(order.items))}
+                  createdAt={order.createdAt}
+                  hideOrderLabel={true}
                 />
               ))}
             </div>

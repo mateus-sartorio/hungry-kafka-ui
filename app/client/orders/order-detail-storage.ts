@@ -36,16 +36,9 @@ export function readPersistedOrder(orderId: number): OrderResponse | null {
   }
 }
 
-/** Route segment is lowercased order code, e.g. `txn-00442`. */
+/** Route segment is order id, e.g. `442`. */
 export function parseOrderIdFromRouteSegment(segment: string): number | null {
   const normalized = segment.trim().toLowerCase();
-  const match = /^txn-(\d+)$/.exec(normalized);
-
-  if (match) {
-    const id = Number.parseInt(match[1], 10);
-    return Number.isFinite(id) ? id : null;
-  }
-
   const asNum = Number.parseInt(normalized, 10);
   return Number.isFinite(asNum) && asNum > 0 ? asNum : null;
 }

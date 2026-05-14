@@ -16,11 +16,12 @@ export function ProductCatalogSection({ products, onAddProduct }: ProductCatalog
         Curated Daily Selection
       </p>
 
-      <div className="mt-8 grid grid-cols-1 gap-8 md:grid-cols-12">
+      <div className="mt-6 grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-4">
         {products.map((product) => (
           <ProductCard
             key={product.id}
             product={product}
+            detailHref={`/client/products/${product.id}`}
             onAdd={() => onAddProduct(product)}
           />
         ))}
