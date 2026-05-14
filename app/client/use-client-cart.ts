@@ -9,6 +9,18 @@ import {
   type CatalogItem,
   type CartItem,
 } from "./home-data";
+import { readStoredClientId } from "./user-config";
+
+function publishCartEvent(action: "added" | "removed", currentAmount: number, productId: number) {
+  const clientId = readStoredClientId();
+  if (!clientId) return;
+
+  fetch("/api/client/cart/events", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action, currentAmount, productId, clientId }),
+  }).catch((err) => console.error("Failed to publish cart event:", err));
+}
 
 function getCartSnapshot() {
   return readStoredCartItems();
@@ -52,12 +64,13 @@ export function useClientCart() {
       const existingItem = cartItems.find((item) => item.name === product.name);
 
       if (existingItem) {
+        const currentAmount = existingItem.quantity + 1;
         commitCartItems(
           cartItems.map((item) =>
-            item.name === product.name ? { ...item, quantity: item.quantity + 1 } : item,
+            item.name === product.name ? { ...item, quantity: currentAmount } : item,
           ),
         );
-
+        publishCartEvent("added", currentAmount, product.id);
         return;
       }
 
@@ -71,34 +84,39 @@ export function useClientCart() {
           image: product.photoUrl,
         },
       ]);
+      publishCartEvent("added", 1, product.id);
     },
     [cartItems, commitCartItems],
   );
 
   const increaseCartItem = useCallback(
     (itemToIncrease: CartItem) => {
+      const currentAmount = itemToIncrease.quantity + 1;
       commitCartItems(
         cartItems.map((item) =>
           item.name === itemToIncrease.name
-            ? { ...item, quantity: item.quantity + 1 }
+            ? { ...item, quantity: currentAmount }
             : item,
         ),
       );
+      publishCartEvent("added", currentAmount, itemToIncrease.productId);
     },
     [cartItems, commitCartItems],
   );
 
   const decreaseCartItem = useCallback(
     (itemToDecrease: CartItem) => {
+      const currentAmount = itemToDecrease.quantity - 1;
       commitCartItems(
         cartItems
           .map((item) =>
             item.name === itemToDecrease.name
-              ? { ...item, quantity: item.quantity - 1 }
+              ? { ...item, quantity: currentAmount }
               : item,
           )
           .filter((item) => item.quantity > 0),
       );
+      publishCartEvent("removed", currentAmount, itemToDecrease.productId);
     },
     [cartItems, commitCartItems],
   );
@@ -106,6 +124,7 @@ export function useClientCart() {
   const removeCartItem = useCallback(
     (itemToRemove: CartItem) => {
       commitCartItems(cartItems.filter((item) => item.name !== itemToRemove.name));
+      publishCartEvent("removed", 0, itemToRemove.productId);
     },
     [cartItems, commitCartItems],
   );

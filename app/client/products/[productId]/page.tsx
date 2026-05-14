@@ -51,6 +51,16 @@ export default function ClientProductDetailPage() {
     [productId, products],
   );
 
+  useEffect(() => {
+    if (!product || !clientId) return;
+
+    fetch("/api/client/click-stream/events", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ productId: product.id, clientId }),
+    }).catch(err => console.error("Failed to track product view", err));
+  }, [product, clientId]);
+
   const total = useMemo(
     () =>
       cartItems.reduce(
