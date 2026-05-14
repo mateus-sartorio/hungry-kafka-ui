@@ -185,7 +185,7 @@ export default function ClientProductDetailPage() {
           <>
             <div className="relative mb-6 aspect-square w-full max-h-[min(85vw,28rem)] overflow-hidden rounded-2xl border border-[#c3caac]/20 bg-white shadow-sm">
               <Image
-                src={product.photoUrl}
+                src={product.photo}
                 alt={product.name}
                 fill
                 priority
@@ -195,10 +195,12 @@ export default function ClientProductDetailPage() {
               />
             </div>
 
-            <div className="mb-3 flex flex-wrap items-center gap-2">
-              <span className="rounded-full bg-[#f1f4f2] px-3 py-1 text-[10px] font-black uppercase tracking-wider text-[#4c6700]">
-                {product.category.name}
-              </span>
+            <div className="mb-3">
+              {product.priority !== undefined && (
+                <span className="rounded-full bg-[#f1f4f2] px-3 py-1 text-[10px] font-black uppercase tracking-wider text-[#4c6700]" title="Preference Score">
+                  ★ {product.priority.toFixed(3)}
+                </span>
+              )}
             </div>
 
             <h1 className="mb-2 text-3xl font-black tracking-tight text-[#181c1b]">{product.name}</h1>

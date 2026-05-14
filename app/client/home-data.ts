@@ -3,11 +3,8 @@ export type CatalogItem = {
   name: string;
   description: string;
   price: number;
-  photoUrl: string;
-  category: {
-    id: number;
-    name: string;
-  };
+  photo: string;
+  priority: number;
 };
 
 export type CartItem = {

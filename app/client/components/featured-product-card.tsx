@@ -26,7 +26,7 @@ export function FeaturedProductCard({ product, detailHref, onAdd }: FeaturedProd
         className="group relative block aspect-[4/3] w-full shrink-0 overflow-hidden sm:aspect-square sm:w-1/2 md:w-3/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#4c6700]"
       >
         <Image
-          src={product.photoUrl}
+          src={product.photo}
           alt={product.name}
           fill
           unoptimized
@@ -40,9 +40,11 @@ export function FeaturedProductCard({ product, detailHref, onAdd }: FeaturedProd
             <span className="rounded-full bg-[#4c6700] px-3 py-1 text-[10px] font-black uppercase tracking-widest text-white">
               Featured
             </span>
-            <span className="rounded-full bg-[#f1f4f2] px-3 py-1 text-[10px] font-black uppercase tracking-widest text-[#4c6700]">
-              {product.category.name}
-            </span>
+            {product.priority !== undefined && (
+              <span className="rounded-full bg-[#f1f4f2] px-3 py-1 text-[10px] font-black uppercase tracking-widest text-[#4c6700]" title="Preference Score">
+                ★ {product.priority.toFixed(3)}
+              </span>
+            )}
           </div>
           <Link
             href={detailHref}

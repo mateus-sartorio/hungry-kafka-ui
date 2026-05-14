@@ -48,8 +48,14 @@ function subscribeToCartChanges(onStoreChange: () => void) {
   };
 }
 
+const EMPTY_CART: CartItem[] = [];
+
+function getServerSnapshot() {
+  return EMPTY_CART;
+}
+
 export function useClientCart() {
-  const cartItems = useSyncExternalStore(subscribeToCartChanges, getCartSnapshot, () => []);
+  const cartItems = useSyncExternalStore(subscribeToCartChanges, getCartSnapshot, getServerSnapshot);
 
   const commitCartItems = useCallback((nextItems: CartItem[]) => {
     writeStoredCartItems(nextItems);
@@ -81,7 +87,7 @@ export function useClientCart() {
           name: product.name,
           unitPrice: product.price,
           quantity: 1,
-          image: product.photoUrl,
+          image: product.photo || "",
         },
       ]);
       publishCartEvent("added", 1, product.id);

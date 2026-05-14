@@ -27,7 +27,7 @@ export function ProductCard({ product, detailHref, onAdd }: ProductCardProps) {
       >
         <div className="relative mb-2 aspect-square w-full max-h-28 overflow-hidden rounded-lg sm:max-h-32">
           <Image
-            src={product.photoUrl}
+            src={product.photo}
             alt={product.name}
             fill
             unoptimized
@@ -36,9 +36,11 @@ export function ProductCard({ product, detailHref, onAdd }: ProductCardProps) {
           />
         </div>
         <div className="mb-1.5 flex items-center gap-2">
-          <span className="rounded-full bg-[#f1f4f2] px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-[#4c6700]">
-            {product.category.name}
-          </span>
+          {product.priority !== undefined && (
+            <span className="rounded-full bg-[#f1f4f2] px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-[#4c6700]" title="Preference Score">
+              ★ {product.priority.toFixed(3)}
+            </span>
+          )}
         </div>
         <h4 className="line-clamp-2 text-sm font-bold leading-snug text-[#181c1b] group-hover:text-[#4c6700]">
           {product.name}
