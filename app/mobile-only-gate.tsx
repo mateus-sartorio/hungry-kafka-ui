@@ -21,7 +21,7 @@ function DesktopBlockedPage() {
   return (
     <main className="flex min-h-screen items-center justify-center bg-[#f7faf8] p-6 text-[#181c1b]">
       <div className="w-full max-w-md border border-[#c3caac]/30 bg-white p-8 text-center shadow-sm">
-        <h1 className="text-2xl font-black italic tracking-tight text-[#4c6700]">Queue-sine</h1>
+        <h1 className="text-2xl font-black italic tracking-tight text-[#4c6700]">Kafka food</h1>
         <p className="mt-4 text-sm font-bold uppercase tracking-widest text-[#705a4f]">
           Mobile only
         </p>

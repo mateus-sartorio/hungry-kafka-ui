@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { FaArrowLeft } from "react-icons/fa";
 
@@ -33,7 +34,10 @@ export function ClientHeader({ username, onBack, backHref, className }: ClientHe
             <FaArrowLeft className="h-4 w-4" />
           </Link>
         ) : null}
-        <h1 className="text-2xl font-black italic tracking-tight text-[#4c6700]">Queue-sine</h1>
+        <div className="flex items-center gap-3">
+          <Image src="/logo.jpeg" alt="Logo" width={32} height={32} className="rounded-md object-cover" />
+          <h1 className="text-2xl font-black italic tracking-tight text-[#4c6700]">Kafka food</h1>
+        </div>
       </div>
       <span className="text-xs font-bold uppercase tracking-widest text-[#705a4f]">{username}</span>
     </header>
