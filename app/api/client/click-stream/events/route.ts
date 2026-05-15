@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
     await producer.connect();
     
     await producer.send({
-      topic: "click-stream-events",
+      topic: "item-view-events",
       messages: [
         {
           key: String(clientId),
