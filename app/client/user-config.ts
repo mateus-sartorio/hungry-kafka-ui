@@ -1,7 +1,7 @@
-export const USERNAME_STORAGE_KEY = "queue-sine.username";
-export const CLIENT_ID_STORAGE_KEY = "queue-sine.client-id";
+export const USERNAME_STORAGE_KEY = "hungry-kafka.username";
+export const CLIENT_ID_STORAGE_KEY = "hungry-kafka.client-id";
 
-const CLIENT_STORAGE_CHANGE_EVENT = "queue-sine.client-storage-change";
+const CLIENT_STORAGE_CHANGE_EVENT = "hungry-kafka.client-storage-change";
 
 export function readStoredUsername(): string {
   if (typeof window === "undefined") {

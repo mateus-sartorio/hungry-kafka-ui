@@ -42,7 +42,7 @@ export function CartDrawer({
 
   useEffect(() => {
     function handleStorageChange(event: StorageEvent) {
-      if (event.key !== "queue-sine.client-cart") {
+      if (event.key !== "hungry-kafka.client-cart") {
         return;
       }
 

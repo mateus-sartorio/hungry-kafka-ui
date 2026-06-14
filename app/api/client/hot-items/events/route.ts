@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { Kafka } from "kafkajs";
 
 const kafka = new Kafka({
-  clientId: "queue-sine-ui-hot-items",
+  clientId: "hungry-kafka-ui-hot-items",
   brokers: ["localhost:9092"],
 });
 
@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
   }
 
   const topic = "hot-item-events";
-  const consumer = kafka.consumer({ groupId: `queue-sine-ui-hot-items-${clientId}` });
+  const consumer = kafka.consumer({ groupId: `hungry-kafka-ui-hot-items-${clientId}` });
 
   const stream = new ReadableStream({
     async start(controller) {

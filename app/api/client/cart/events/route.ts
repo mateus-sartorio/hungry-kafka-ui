@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { Kafka } from "kafkajs";
 
 const kafka = new Kafka({
-  clientId: "queue-sine-ui-cart-events",
+  clientId: "hungry-kafka-ui-cart-events",
   brokers: ["localhost:9092"],
 });
 

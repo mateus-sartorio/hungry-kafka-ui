@@ -1,6 +1,6 @@
 import type { StoreOrderResponse } from "./store-order-types";
 
-const STORAGE_KEY_PREFIX = "queue-sine.store-order-detail";
+const STORAGE_KEY_PREFIX = "hungry-kafka.store-order-detail";
 
 function storageKey(orderId: number) {
   return `${STORAGE_KEY_PREFIX}:${orderId}`;

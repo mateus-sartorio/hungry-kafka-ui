@@ -20,9 +20,9 @@ export type ClientHomeData = {
   cartItems: CartItem[];
 };
 
-export const CART_STORAGE_KEY = "queue-sine.client-cart";
+export const CART_STORAGE_KEY = "hungry-kafka.client-cart";
 
-export const CART_CHANGE_EVENT = "queue-sine.client-cart-change";
+export const CART_CHANGE_EVENT = "hungry-kafka.client-cart-change";
 
 let cachedStoredCartRaw: string | null = null;
 let cachedStoredCartItems: CartItem[] = [];

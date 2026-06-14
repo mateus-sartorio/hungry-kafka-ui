@@ -6,6 +6,6 @@ const kafkaBrokers = (process.env.KAFKA_BROKERS ?? "localhost:9092,localhost:909
   .filter(Boolean);
 
 export const kafkaOrderUi = new Kafka({
-  clientId: process.env.KAFKA_CLIENT_ID ?? "queue-sine-ui",
+  clientId: process.env.KAFKA_CLIENT_ID ?? "hungry-kafka-ui",
   brokers: kafkaBrokers,
 });

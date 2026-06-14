@@ -2,13 +2,13 @@ import { NextRequest } from "next/server";
 import { Kafka } from "kafkajs";
 
 const kafka = new Kafka({
-  clientId: "queue-sine-ui-store-events",
+  clientId: "hungry-kafka-ui-store-events",
   brokers: ["localhost:9092"],
 });
 
 export async function GET(request: NextRequest) {
   const topic = "order-status-changed";
-  const consumer = kafka.consumer({ groupId: `queue-sine-ui-store-group-${Date.now()}` });
+  const consumer = kafka.consumer({ groupId: `hungry-kafka-ui-store-group-${Date.now()}` });
 
   const stream = new ReadableStream({
     async start(controller) {
