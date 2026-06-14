@@ -24,12 +24,12 @@ export const CART_STORAGE_KEY = "queue-sine.client-cart";
 
 export const CART_CHANGE_EVENT = "queue-sine.client-cart-change";
 
-let cachedStoredCartRaw = "";
+let cachedStoredCartRaw: string | null = null;
 let cachedStoredCartItems: CartItem[] = [];
 
 export function readStoredCartItems(): CartItem[] {
   if (typeof window === "undefined") {
-    return [];
+    return cachedStoredCartItems;
   }
 
   const rawCartItems = localStorage.getItem(CART_STORAGE_KEY);
@@ -39,16 +39,18 @@ export function readStoredCartItems(): CartItem[] {
   }
 
   if (!rawCartItems) {
-    cachedStoredCartRaw = "";
+    cachedStoredCartRaw = rawCartItems;
     cachedStoredCartItems = [];
-    return [];
+    return cachedStoredCartItems;
   }
 
   try {
     const parsedItems = JSON.parse(rawCartItems) as unknown;
 
     if (!Array.isArray(parsedItems)) {
-      return [];
+      cachedStoredCartRaw = rawCartItems;
+      cachedStoredCartItems = [];
+      return cachedStoredCartItems;
     }
 
     const nextItems = parsedItems.filter((item): item is CartItem => {
@@ -73,9 +75,9 @@ export function readStoredCartItems(): CartItem[] {
 
     return nextItems;
   } catch {
-    cachedStoredCartRaw = "";
+    cachedStoredCartRaw = rawCartItems;
     cachedStoredCartItems = [];
-    return [];
+    return cachedStoredCartItems;
   }
 }
 

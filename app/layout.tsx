@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Queue-sine",
-  description: "Queue-sine mobile ordering platform",
+  title: "Kafka food",
+  description: "Kafka food mobile ordering platform",
 };
 
 export default function RootLayout({
