@@ -15,6 +15,8 @@ import {
   writeStoredStoreOrders,
 } from "./store-orders-storage";
 import type { StoreOrderResponse } from "./store-order-types";
+import { stompSubscribe } from "../lib/websocket/stomp-client";
+import { STORE_ORDERS_DESTINATION } from "../lib/websocket/events";
 
 type StoreOrdersContextValue = {
   orders: StoreOrderResponse[];
@@ -90,14 +92,12 @@ export function StoreOrdersProvider({ children }: { children: React.ReactNode })
       return;
     }
 
-    const eventSource = new EventSource(`/api/store/orders/events`);
-
-    eventSource.onmessage = (event) => {
+    const unsubscribe = stompSubscribe(STORE_ORDERS_DESTINATION, (body) => {
       try {
-        const updatedOrder = JSON.parse(event.data) as StoreOrderResponse;
+        const updatedOrder = body as StoreOrderResponse;
         const currentOrders = readStoredStoreOrders();
         const orderIndex = currentOrders.findIndex((o) => o.id === updatedOrder.id);
-        
+
         let newOrders;
         if (orderIndex >= 0) {
           newOrders = [...currentOrders];
@@ -105,16 +105,14 @@ export function StoreOrdersProvider({ children }: { children: React.ReactNode })
         } else {
           newOrders = [updatedOrder, ...currentOrders];
         }
-        
+
         writeStoredStoreOrders(newOrders);
       } catch (err) {
-        console.error("Failed to parse order update from SSE", err);
+        console.error("Failed to handle order update from WebSocket", err);
       }
-    };
+    });
 
-    return () => {
-      eventSource.close();
-    };
+    return unsubscribe;
   }, []);
 
   const value = useMemo<StoreOrdersContextValue>(

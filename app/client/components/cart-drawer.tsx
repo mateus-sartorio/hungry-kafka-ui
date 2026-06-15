@@ -42,7 +42,7 @@ export function CartDrawer({
 
   useEffect(() => {
     function handleStorageChange(event: StorageEvent) {
-      if (event.key !== "queue-sine.client-cart") {
+      if (event.key !== "hungry-kafka.client-cart") {
         return;
       }
 
@@ -185,7 +185,7 @@ export function CartDrawer({
                 onClick={() => void handleCheckout()}
                 className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[#c8f53c] py-4 text-lg font-bold text-zinc-900 shadow-[0_4px_14px_0_rgba(200,245,60,0.39)] transition hover:bg-[#b0d934] active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-zinc-200 disabled:text-zinc-500 disabled:shadow-none"
               >
-                {isSubmittingOrder ? "Submitting..." : "Checkout Now"}
+                {isSubmittingOrder ? "Submitting..." : "Order Now"}
                 <FaArrowRight aria-hidden="true" className="h-4 w-4" />
               </button>
               {orderError ? <p className="mt-3 text-sm text-red-500">{orderError}</p> : null}

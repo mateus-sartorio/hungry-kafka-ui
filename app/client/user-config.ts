@@ -1,7 +1,7 @@
-export const USERNAME_STORAGE_KEY = "queue-sine.username";
-export const CLIENT_ID_STORAGE_KEY = "queue-sine.client-id";
+export const USERNAME_STORAGE_KEY = "hungry-kafka.username";
+export const CLIENT_ID_STORAGE_KEY = "hungry-kafka.client-id";
 
-const CLIENT_STORAGE_CHANGE_EVENT = "queue-sine.client-storage-change";
+const CLIENT_STORAGE_CHANGE_EVENT = "hungry-kafka.client-storage-change";
 
 export function readStoredUsername(): string {
   if (typeof window === "undefined") {
@@ -56,7 +56,7 @@ export async function createStoredClientId(clientName: string): Promise<number> 
     return existingClientId;
   }
 
-  const response = await fetch("/api/clients", {
+  const response = await fetch("http://localhost:8080/api/clients", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -80,7 +80,7 @@ export async function updateStoredClientName(
   clientId: number,
   clientName: string,
 ): Promise<void> {
-  const response = await fetch(`/api/clients/${clientId}`, {
+  const response = await fetch(`http://localhost:8080/api/clients/${clientId}`, {
     method: "PATCH",
     headers: {
       "Content-Type": "application/json",

@@ -4,7 +4,6 @@ import { FaArrowLeft } from "react-icons/fa";
 
 type ClientHeaderProps = {
   username: string;
-  /** When set, the arrow uses browser-style back (e.g. `router.back()`). Takes precedence over `backHref`. */
   onBack?: () => void;
   backHref?: string;
   className?: string;
@@ -39,7 +38,12 @@ export function ClientHeader({ username, onBack, backHref, className }: ClientHe
           <h1 className="text-2xl font-black italic tracking-tight text-[#4c6700]">Kafka food</h1>
         </div>
       </div>
-      <span className="text-xs font-bold uppercase tracking-widest text-[#705a4f]">{username}</span>
+      <Link
+        href="/client/settings"
+        className="text-xs font-bold uppercase tracking-widest text-[#705a4f] transition hover:text-[#4c6700]"
+      >
+        {username}
+      </Link>
     </header>
   );
 }

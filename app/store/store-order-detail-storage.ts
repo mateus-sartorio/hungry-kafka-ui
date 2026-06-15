@@ -1,28 +1,16 @@
 import type { StoreOrderResponse } from "./store-order-types";
 
-const STORAGE_KEY_PREFIX = "queue-sine.store-order-detail";
+const STORAGE_KEY_PREFIX = "hungry-kafka.store-order-detail";
 
 function storageKey(orderId: number) {
   return `${STORAGE_KEY_PREFIX}:${orderId}`;
 }
 
 export function persistStoreOrderForDetailRoute(order: StoreOrderResponse) {
-  if (typeof window === "undefined") {
-    return;
-  }
-
-  try {
-    sessionStorage.setItem(storageKey(order.id), JSON.stringify(order));
-  } catch {
-    // ignore quota / private mode
-  }
+  sessionStorage.setItem(storageKey(order.id), JSON.stringify(order));
 }
 
 export function readPersistedStoreOrder(orderId: number): StoreOrderResponse | null {
-  if (typeof window === "undefined") {
-    return null;
-  }
-
   const raw = sessionStorage.getItem(storageKey(orderId));
 
   if (!raw) {

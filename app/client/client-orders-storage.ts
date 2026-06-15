@@ -1,9 +1,9 @@
 import type { OrderResponse } from "./orders/order-types";
 
-export const CLIENT_ORDERS_CHANGE_EVENT = "queue-sine.client-orders-change";
+export const CLIENT_ORDERS_CHANGE_EVENT = "hungry-kafka.client-orders-change";
 
 export function clientOrdersStorageKey(clientId: number) {
-  return `queue-sine.client-orders:${clientId}`;
+  return `hungry-kafka.client-orders:${clientId}`;
 }
 
 type StoredClientOrdersPayload = {

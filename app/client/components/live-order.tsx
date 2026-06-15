@@ -10,9 +10,7 @@ type LiveOrderProps = {
   eta: string;
   progressPercent: number;
   stages: LiveOrderStage[];
-  /** When set, the card navigates here and shows hover affordance. */
   href?: string;
-  /** Runs before navigation (e.g. persist order snapshot for the detail page). */
   onBeforeNavigate?: () => void;
 };
 

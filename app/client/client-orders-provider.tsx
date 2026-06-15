@@ -16,6 +16,8 @@ import {
 } from "./client-orders-storage";
 import type { OrderResponse } from "./orders/order-types";
 import { useClientIdentity } from "./use-client-identity";
+import { stompSubscribe } from "../lib/websocket/stomp-client";
+import { clientOrderDestination } from "../lib/websocket/events";
 
 type ClientOrdersContextValue = {
   orders: OrderResponse[];
@@ -104,38 +106,55 @@ export function ClientOrdersProvider({ children }: { children: React.ReactNode }
     };
   }, [clientId]);
 
+  // A stable key over the set of order ids so the subscription effect only
+  // re-runs when orders are added/removed, not on every status update.
+  const subscribedOrderIdsKey = useMemo(
+    () => orders.map((order) => order.id).sort((a, b) => a - b).join(","),
+    [orders],
+  );
+
   useEffect(() => {
     if (typeof window === "undefined" || !clientId) {
       return;
     }
 
     const id = clientId;
-    const eventSource = new EventSource(`/api/client/orders/${id}/events`);
+    const orderIds = subscribedOrderIdsKey
+      ? subscribedOrderIdsKey.split(",").map(Number)
+      : [];
 
-    eventSource.onmessage = (event) => {
-      try {
-        const updatedOrder = JSON.parse(event.data) as OrderResponse;
-        const currentOrders = readStoredClientOrders(id);
-        const orderIndex = currentOrders.findIndex((o) => o.id === updatedOrder.id);
-        
-        let newOrders;
-        if (orderIndex >= 0) {
-          newOrders = [...currentOrders];
-          newOrders[orderIndex] = updatedOrder;
-        } else {
-          newOrders = [updatedOrder, ...currentOrders];
+    if (orderIds.length === 0) {
+      return;
+    }
+
+    // The backend broadcasts per-order updates to /topic/orders/{orderId}, so
+    // subscribe to every order this client currently has.
+    const unsubscribers = orderIds.map((orderId) =>
+      stompSubscribe(clientOrderDestination(orderId), (body) => {
+        try {
+          const updatedOrder = body as OrderResponse;
+          const currentOrders = readStoredClientOrders(id);
+          const orderIndex = currentOrders.findIndex((o) => o.id === updatedOrder.id);
+
+          let newOrders;
+          if (orderIndex >= 0) {
+            newOrders = [...currentOrders];
+            newOrders[orderIndex] = updatedOrder;
+          } else {
+            newOrders = [updatedOrder, ...currentOrders];
+          }
+
+          writeStoredClientOrders(id, newOrders);
+        } catch (err) {
+          console.error("Failed to handle order update from WebSocket", err);
         }
-        
-        writeStoredClientOrders(id, newOrders);
-      } catch (err) {
-        console.error("Failed to parse order update from SSE", err);
-      }
-    };
+      }),
+    );
 
     return () => {
-      eventSource.close();
+      unsubscribers.forEach((unsubscribe) => unsubscribe());
     };
-  }, [clientId]);
+  }, [clientId, subscribedOrderIdsKey]);
 
   const value = useMemo<ClientOrdersContextValue>(
     () => ({
