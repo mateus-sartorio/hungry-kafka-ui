@@ -27,12 +27,7 @@ function activateSubscription(
   }
 
   return client.subscribe(registration.destination, (message) => {
-    let body: unknown = message.body;
-    try {
-      body = JSON.parse(message.body);
-    } catch {
-      // Leave the raw string as the payload when it is not valid JSON.
-    }
+    const body = JSON.parse(message.body);
     registration.handler(body);
   });
 }
@@ -59,16 +54,12 @@ function ensureClient(): Client {
     brokerURL: BROKER_URL,
     reconnectDelay: 5000,
     onConnect: () => {
-      // (Re)subscribe every active registration. On a reconnect the previous
-      // STOMP subscriptions are gone, so they are recreated here.
       for (const registration of registrations.values()) {
         registration.subscription = activateSubscription(registration);
       }
       flushPendingPublishes();
     },
     onWebSocketClose: () => {
-      // The socket dropped: invalidate every subscription handle so the next
-      // onConnect recreates them instead of reusing dead ones.
       for (const registration of registrations.values()) {
         registration.subscription = undefined;
       }
@@ -89,19 +80,10 @@ function ensureClient(): Client {
   return client;
 }
 
-/**
- * Subscribe to a STOMP destination. The handler receives the parsed JSON body
- * (or the raw string when the payload is not JSON). Returns an unsubscribe
- * function. Subscriptions survive reconnects automatically.
- */
 export function stompSubscribe(
   destination: string,
   handler: MessageHandler,
 ): () => void {
-  if (typeof window === "undefined") {
-    return () => {};
-  }
-
   const activeClient = ensureClient();
   const registration: Registration = {
     id: nextRegistrationId++,
@@ -121,15 +103,7 @@ export function stompSubscribe(
   };
 }
 
-/**
- * Publish a JSON-serializable body to a STOMP destination. If the connection is
- * not established yet, the message is queued and flushed once connected.
- */
 export function stompPublish(destination: string, body: unknown): void {
-  if (typeof window === "undefined") {
-    return;
-  }
-
   const activeClient = ensureClient();
   const message = { destination, body: JSON.stringify(body) };
 

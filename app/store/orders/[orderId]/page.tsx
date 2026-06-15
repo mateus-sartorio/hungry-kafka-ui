@@ -178,7 +178,7 @@ export default function StoreOrderDetailsPage() {
   }, [status, submitOrderStatus]);
 
   const readOnlyMessage = useMemo(() => {
-    if (status === "OUT_FOR_DELIVERY") {
+    if (status === "OUT FOR DELIVERY") {
       return "This order is out for delivery. The client will confirm the delivery.";
     }
 

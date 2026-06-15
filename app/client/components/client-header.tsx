@@ -38,7 +38,12 @@ export function ClientHeader({ username, onBack, backHref, className }: ClientHe
           <h1 className="text-2xl font-black italic tracking-tight text-[#4c6700]">Kafka food</h1>
         </div>
       </div>
-      <span className="text-xs font-bold uppercase tracking-widest text-[#705a4f]">{username}</span>
+      <Link
+        href="/client/settings"
+        className="text-xs font-bold uppercase tracking-widest text-[#705a4f] transition hover:text-[#4c6700]"
+      >
+        {username}
+      </Link>
     </header>
   );
 }

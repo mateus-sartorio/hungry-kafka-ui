@@ -26,6 +26,6 @@ export function readPersistedOrder(orderId: number): OrderResponse | null {
 
 export function parseOrderIdFromRouteSegment(segment: string): number | null {
   const normalized = segment.trim().toLowerCase();
-  const asNum = Number.parseInt(normalized, 10);
-  return Number.isFinite(asNum) && asNum > 0 ? asNum : null;
+  const asNumber = Number.parseInt(normalized, 10);
+  return Number.isFinite(asNumber) && asNumber > 0 ? asNumber : null;
 }

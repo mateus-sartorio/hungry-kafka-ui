@@ -6,8 +6,8 @@ type OrderStatusCardProps = {
 
 export function OrderStatusCard({
   orderCode,
-  status = "Preparing",
-  estimate = "Est. 15-20 mins",
+  status,
+  estimate,
 }: OrderStatusCardProps) {
   return (
     <div className="mb-12">

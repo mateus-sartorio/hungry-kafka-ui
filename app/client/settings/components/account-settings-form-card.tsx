@@ -1,10 +1,10 @@
-import type { FormEvent } from "react";
+import type { SyntheticEvent } from "react";
 
 type AccountSettingsFormCardProps = {
   usernameInput: string;
   submitLabel: string;
   onUsernameInputChange: (value: string) => void;
-  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+  onSubmit: (event: SyntheticEvent<HTMLFormElement>) => void;
 };
 
 export function AccountSettingsFormCard({

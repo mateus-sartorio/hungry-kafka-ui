@@ -195,7 +195,7 @@ export default function OrderDetailsPage() {
             <OrderStatusCard
               orderCode={orderCode}
               status={formatStatus(order.status)}
-              estimate={`Placed ${formatElapsed(order.createdAt)} ago`}
+              estimate={`Placed ${formatElapsed(order.createdAt)}`}
             />
 
             {order.status === "OUT_FOR_DELIVERY" && (
@@ -203,7 +203,7 @@ export default function OrderDetailsPage() {
                 <button
                   onClick={() => void handleMarkDelivered()}
                   disabled={isMarkingDelivered}
-                  className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[#4c6700] py-3 text-base font-bold text-white transition hover:bg-[#3a5000] active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-[#737a61]"
+                  className="flex w-full items-center justify-center gap-2 bg-[#4c6700] py-3 text-base font-bold text-white transition hover:bg-[#3a5000] active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-[#737a61]"
                 >
                   {isMarkingDelivered ? "Marking as delivered..." : "Mark as Delivered"}
                 </button>

@@ -1,3 +1,4 @@
+import { formatStatus } from "@/app/client/orders/order-format";
 import { FaCheck, FaClock, FaTruck } from "react-icons/fa";
 
 export type OrderStatusPrimaryAction = {
@@ -34,7 +35,7 @@ function ActionIcon({ icon }: { icon: OrderStatusPrimaryAction["icon"] }) {
 }
 
 export function OrderStatusCard({
-  statusBadge,
+  statusBadge: status,
   estimatedDelivery,
   primaryAction,
   secondaryAction,
@@ -49,7 +50,7 @@ export function OrderStatusCard({
           Current Status
         </h2>
         <span className="inline-block bg-[#4c6700] px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-white">
-          {statusBadge}
+          {formatStatus(status)}
         </span>
         {estimatedDelivery ? (
           <p className="mt-2 text-xs font-semibold uppercase tracking-wide text-[#516070]">

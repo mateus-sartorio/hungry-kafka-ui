@@ -1,6 +1,6 @@
 "use client";
 
-import { type FormEvent, useState } from "react";
+import { SyntheticEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import { BottomNavigation } from "../components/bottom-navigation";
 import { ClientHeader } from "../components/client-header";
@@ -13,7 +13,7 @@ import {
 } from "../user-config";
 import { useClientIdentity } from "../use-client-identity";
 
-const FIRST_USERNAME_DEFAULT = "john doe";
+const FIRST_USERNAME_DEFAULT = "John Doe";
 
 export default function ClientSettingsPage() {
   const router = useRouter();
@@ -27,7 +27,7 @@ export default function ClientSettingsPage() {
 
   const submitLabel = clientId ? "Update Client" : "Create Profile";
 
-  const onSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const onSubmit = (event: SyntheticEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     const submit = async () => {
