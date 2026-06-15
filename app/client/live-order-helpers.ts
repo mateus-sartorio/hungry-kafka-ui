@@ -4,65 +4,22 @@ function normalizeStatus(status: string) {
   return status.trim().toUpperCase().replace(/\s+/g, "_");
 }
 
-function isCancelledStatus(status: string) {
-  return normalizeStatus(status).includes("CANCEL");
-}
+const PROGRESS_RANK_BY_STATUS: Record<string, number> = {
+  CANCELLED: -1,
+  CREATED: 0,
+  ACCEPTED: 1,
+  PREPARING: 2,
+  OUT_FOR_DELIVERY: 3,
+  DELIVERED: 4,
+};
 
-function isDeliveredStatus(status: string) {
-  const u = normalizeStatus(status);
-  return u.includes("DELIVERED") || u.includes("COMPLETED");
-}
-
-/** 0 = CREATED, 1 = confirmed+, 2 = preparing+, 3 = out for delivery */
 export function clientOrderProgressRank(status: string): number {
-  if (isCancelledStatus(status)) {
-    return -1;
-  }
-
-  const u = normalizeStatus(status);
-
-  if (u === "CREATED") {
-    return 0;
-  }
-
-  if (u === "ACCEPTED" || u === "CONFIRMED") {
-    return 1;
-  }
-
-  if (u === "PREPARING" || u === "IN_PREPARATION") {
-    return 2;
-  }
-
-  if (u === "OUT_FOR_DELIVERY") {
-    return 3;
-  }
-
-  if (u.includes("PREPAR")) {
-    return 2;
-  }
-
-  if (u.includes("OUT") && u.includes("DELIV")) {
-    return 3;
-  }
-
-  if (u.includes("DISPATCH")) {
-    return 3;
-  }
-
-  if (isDeliveredStatus(status)) {
-    return 4;
-  }
-
-  return 0;
+  return PROGRESS_RANK_BY_STATUS[normalizeStatus(status)] ?? 0;
 }
 
 /** In-flight orders from confirmed onward, excluding delivered / cancelled. */
 export function isClientLiveOrderCandidate(order: OrderResponse): boolean {
-  if (isCancelledStatus(order.status)) {
-    return false;
-  }
-
-  if (isDeliveredStatus(order.status)) {
+  if (order.status === "DELIVERED" || order.status === "CANCELLED") {
     return false;
   }
 

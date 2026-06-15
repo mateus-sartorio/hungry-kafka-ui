@@ -11,6 +11,7 @@ function isMobileDevice(): boolean {
     /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Windows Phone/i.test(
       navigator.userAgent,
     );
+    
   const narrowScreen = window.matchMedia("(max-width: 900px)").matches;
   const hasTouch = navigator.maxTouchPoints > 0;
 

@@ -4,7 +4,6 @@ import { FaArrowLeft } from "react-icons/fa";
 
 type ClientHeaderProps = {
   username: string;
-  /** When set, the arrow uses browser-style back (e.g. `router.back()`). Takes precedence over `backHref`. */
   onBack?: () => void;
   backHref?: string;
   className?: string;

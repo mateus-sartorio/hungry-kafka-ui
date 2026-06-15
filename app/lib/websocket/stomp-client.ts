@@ -19,7 +19,9 @@ let nextRegistrationId = 1;
 const registrations = new Map<number, Registration>();
 const pendingPublishes: { destination: string; body: string }[] = [];
 
-function activateSubscription(registration: Registration): StompSubscription | undefined {
+function activateSubscription(
+  registration: Registration,
+): StompSubscription | undefined {
   if (!client) {
     return undefined;
   }
@@ -72,7 +74,11 @@ function ensureClient(): Client {
       }
     },
     onStompError: (frame) => {
-      console.error("[stomp] broker error", frame.headers["message"], frame.body);
+      console.error(
+        "[stomp] broker error",
+        frame.headers["message"],
+        frame.body,
+      );
     },
     onWebSocketError: (event) => {
       console.error("[stomp] websocket error", event);
@@ -88,13 +94,20 @@ function ensureClient(): Client {
  * (or the raw string when the payload is not JSON). Returns an unsubscribe
  * function. Subscriptions survive reconnects automatically.
  */
-export function stompSubscribe(destination: string, handler: MessageHandler): () => void {
+export function stompSubscribe(
+  destination: string,
+  handler: MessageHandler,
+): () => void {
   if (typeof window === "undefined") {
     return () => {};
   }
 
   const activeClient = ensureClient();
-  const registration: Registration = { id: nextRegistrationId++, destination, handler };
+  const registration: Registration = {
+    id: nextRegistrationId++,
+    destination,
+    handler,
+  };
   registrations.set(registration.id, registration);
 
   if (activeClient.connected) {

@@ -11,8 +11,8 @@ import {
   readPersistedOrder,
 } from "../order-detail-storage";
 import type { OrderResponse } from "../order-types";
-import { OrderStatusCard } from "./order-status-card";
-import { OrderWarningCard } from "./order-warning-card";
+import { OrderStatusCard } from "./components/order-status-card";
+import { OrderWarningCard } from "./components/order-warning-card";
 import { OrderItemsCard } from "../../../components/order-items-card";
 import { publishOrderStatusEvent } from "../../../lib/websocket/events";
 

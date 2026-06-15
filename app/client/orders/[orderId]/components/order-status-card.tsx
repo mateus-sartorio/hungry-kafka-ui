@@ -14,7 +14,7 @@ export function OrderStatusCard({
       <h1 className="mb-2 text-2xl font-bold">Order {orderCode}</h1>
       <div className="flex items-center gap-2">
         <span className="bg-[#c1ff00] px-3 py-1 text-[10px] font-black italic uppercase tracking-widest text-[#567300]">
-          Status: {status}
+          {status}
         </span>
         <span className="text-sm text-[#434933]">{estimate}</span>
       </div>

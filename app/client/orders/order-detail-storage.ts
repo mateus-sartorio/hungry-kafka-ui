@@ -7,22 +7,10 @@ function storageKey(orderId: number) {
 }
 
 export function persistOrderForDetailRoute(order: OrderResponse) {
-  if (typeof window === "undefined") {
-    return;
-  }
-
-  try {
-    sessionStorage.setItem(storageKey(order.id), JSON.stringify(order));
-  } catch {
-    // ignore quota / private mode
-  }
+  sessionStorage.setItem(storageKey(order.id), JSON.stringify(order));
 }
 
 export function readPersistedOrder(orderId: number): OrderResponse | null {
-  if (typeof window === "undefined") {
-    return null;
-  }
-
   const raw = sessionStorage.getItem(storageKey(orderId));
 
   if (!raw) {
@@ -36,7 +24,6 @@ export function readPersistedOrder(orderId: number): OrderResponse | null {
   }
 }
 
-/** Route segment is order id, e.g. `442`. */
 export function parseOrderIdFromRouteSegment(segment: string): number | null {
   const normalized = segment.trim().toLowerCase();
   const asNum = Number.parseInt(normalized, 10);

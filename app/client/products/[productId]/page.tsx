@@ -205,7 +205,7 @@ export default function ClientProductDetailPage() {
 
             <section className="rounded-xl border border-[#c3caac]/20 bg-white p-5 shadow-sm">
               <h2 className="mb-3 text-xs font-black uppercase tracking-widest text-[#705a4f]">
-                About this item
+                Description
               </h2>
               <p className="text-base leading-relaxed text-[#434933]">{product.description}</p>
             </section>

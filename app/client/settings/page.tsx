@@ -4,8 +4,8 @@ import { type FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import { BottomNavigation } from "../components/bottom-navigation";
 import { ClientHeader } from "../components/client-header";
-import { AccountSettingsFormCard } from "./account-settings-form-card";
-import { AccountSettingsHeader } from "./account-settings-header";
+import { AccountSettingsFormCard } from "./components/account-settings-form-card";
+import { AccountSettingsHeader } from "./components/account-settings-header";
 import {
   createStoredClientId,
   updateStoredClientName,

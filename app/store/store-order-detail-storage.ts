@@ -7,22 +7,10 @@ function storageKey(orderId: number) {
 }
 
 export function persistStoreOrderForDetailRoute(order: StoreOrderResponse) {
-  if (typeof window === "undefined") {
-    return;
-  }
-
-  try {
-    sessionStorage.setItem(storageKey(order.id), JSON.stringify(order));
-  } catch {
-    // ignore quota / private mode
-  }
+  sessionStorage.setItem(storageKey(order.id), JSON.stringify(order));
 }
 
 export function readPersistedStoreOrder(orderId: number): StoreOrderResponse | null {
-  if (typeof window === "undefined") {
-    return null;
-  }
-
   const raw = sessionStorage.getItem(storageKey(orderId));
 
   if (!raw) {
