@@ -59,7 +59,7 @@ export default function ClientHomePage() {
       throw new Error("Cannot place order");
     }
 
-    const response = await fetch("/api/orders", {
+    const response = await fetch("http://localhost:8080/api/orders", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

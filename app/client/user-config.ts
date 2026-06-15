@@ -56,7 +56,7 @@ export async function createStoredClientId(clientName: string): Promise<number> 
     return existingClientId;
   }
 
-  const response = await fetch("/api/clients", {
+  const response = await fetch("http://localhost:8080/api/clients", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -80,7 +80,7 @@ export async function updateStoredClientName(
   clientId: number,
   clientName: string,
 ): Promise<void> {
-  const response = await fetch(`/api/clients/${clientId}`, {
+  const response = await fetch(`http://localhost:8080/api/clients/${clientId}`, {
     method: "PATCH",
     headers: {
       "Content-Type": "application/json",

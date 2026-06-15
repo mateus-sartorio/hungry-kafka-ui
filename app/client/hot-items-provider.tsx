@@ -4,6 +4,8 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "react-toastify";
 import { useClientIdentity } from "./use-client-identity";
+import { stompSubscribe } from "../lib/websocket/stomp-client";
+import { HOT_ITEMS_DESTINATION } from "../lib/websocket/events";
 
 export function HotItemsProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -12,30 +14,12 @@ export function HotItemsProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!clientId) return;
 
-    const eventSource = new EventSource(`/api/client/hot-items/events?clientId=${clientId}`);
-
-    eventSource.onopen = () => {
-      console.log("[HotItemsProvider] EventSource connected");
-    };
-
-    eventSource.onerror = (err) => {
-      console.error("[HotItemsProvider] EventSource error", err);
-    };
-
-    eventSource.onmessage = (event) => {
-      console.log("[HotItemsProvider] Received SSE message:", event.data);
+    const unsubscribe = stompSubscribe(HOT_ITEMS_DESTINATION, (body) => {
       try {
-        let payload = JSON.parse(event.data);
-        
-        // The backend KafkaTemplate uses JsonSerializer, but the payload passed was a raw String.
-        // This causes the string to be JSON-serialized *again*, making it a string inside a string.
-        // We double-parse it here to get the actual object.
-        if (typeof payload === "string") {
-          payload = JSON.parse(payload);
-        }
+        const payload = body as { productId?: number };
 
-        if (payload.productId) {
-          console.log("[HotItemsProvider] Firing toast for product", payload.productId);
+        if (payload?.productId) {
+          const productId = payload.productId;
           toast.success(`🔥 A product is HOT right now! Click here to check it out!`, {
             position: "top-center",
             autoClose: 5000,
@@ -52,19 +36,16 @@ export function HotItemsProvider({ children }: { children: React.ReactNode }) {
               boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)"
             },
             onClick: () => {
-              router.push(`/client/products/${payload.productId}`);
+              router.push(`/client/products/${productId}`);
             }
           });
         }
       } catch (err) {
-        console.error("Failed to parse hot item event", err);
+        console.error("Failed to handle hot item event", err);
       }
-    };
+    });
 
-    return () => {
-      console.log("[HotItemsProvider] Closing EventSource");
-      eventSource.close();
-    };
+    return unsubscribe;
   }, [router, clientId]);
 
   return <>{children}</>;

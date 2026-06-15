@@ -10,16 +10,13 @@ import {
   type CartItem,
 } from "./home-data";
 import { readStoredClientId } from "./user-config";
+import { publishCartEvent as publishCartEventViaWebSocket } from "../lib/websocket/events";
 
 function publishCartEvent(action: "added" | "removed", currentAmount: number, productId: number) {
   const clientId = readStoredClientId();
   if (!clientId) return;
 
-  fetch("/api/client/cart/events", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ action, currentAmount, productId, clientId }),
-  }).catch((err) => console.error("Failed to publish cart event:", err));
+  publishCartEventViaWebSocket(action, currentAmount, productId, clientId);
 }
 
 function getCartSnapshot() {

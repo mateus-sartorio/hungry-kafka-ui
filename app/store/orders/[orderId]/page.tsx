@@ -20,6 +20,7 @@ import { OrderClientDetailsCard } from "./order-client-details-card";
 import { OrderDeliveryModal } from "./order-delivery-modal";
 import { OrderItemsCard } from "../../../components/order-items-card";
 import { OrderStatusCard, type OrderStatusPrimaryAction } from "./order-status-card";
+import { publishOrderStatusEvent } from "../../../lib/websocket/events";
 
 export default function StoreOrderDetailsPage() {
   const params = useParams<{ orderId: string }>();
@@ -123,30 +124,15 @@ export default function StoreOrderDetailsPage() {
     setIsSubmittingStatus(true);
 
     try {
-      const payload: Record<string, unknown> = {
+      publishOrderStatusEvent({
         orderId: order.id,
         status: kafkaStatus,
         userId: order.client?.clientId != null ? String(order.client.clientId) : "",
         category: "ORDER_STATUS",
-      };
-
-      // Convert deliveryMinutes to ISO 8601 duration format (e.g., "PT15M" for 15 minutes)
-      if (kafkaStatus === "OUT_FOR_DELIVERY" && deliveryMinutes) {
-        payload.expectedDelivery = `PT${deliveryMinutes}M`;
-      }
-
-      const response = await fetch("/api/orders/status-events", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
+        // Convert deliveryMinutes to ISO 8601 duration format (e.g., "PT15M" for 15 minutes)
+        expectedDelivery:
+          kafkaStatus === "OUT_FOR_DELIVERY" && deliveryMinutes ? `PT${deliveryMinutes}M` : null,
       });
-
-      if (!response.ok) {
-        const data = (await response.json().catch(() => ({}))) as { message?: string };
-        throw new Error(data.message ?? "Failed to publish order status");
-      }
 
       setStatus(nextDisplayStatus);
       return true;
@@ -203,7 +189,7 @@ export default function StoreOrderDetailsPage() {
 
   const readOnlyMessage = useMemo(() => {
     if (statusPhase === "OUT_FOR_DELIVERY") {
-      return "This order is out for delivery. The store workflow is complete; further updates happen outside the store dashboard.";
+      return "This order is out for delivery. The client will confirm the delivery.";
     }
 
     if (statusPhase === "DELIVERED") {
@@ -211,11 +197,7 @@ export default function StoreOrderDetailsPage() {
     }
 
     if (statusPhase === "CANCELLED") {
-      return "This order has been cancelled. No further actions can be taken.";
-    }
-
-    if (statusPhase === "UNKNOWN") {
-      return "This order status is not recognized for store actions. Try refreshing after the server updates.";
+      return "This order has been cancelled.";
     }
 
     return null;

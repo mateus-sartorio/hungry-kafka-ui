@@ -12,6 +12,7 @@ import { readStoredUsername, readStoredClientId } from "../../user-config";
 import { useClientIdentity } from "../../use-client-identity";
 import { useClientCart } from "../../use-client-cart";
 import { useClientOrders } from "../../use-client-orders";
+import { publishItemViewEvent } from "../../../lib/websocket/events";
 
 function formatUsd(value: number) {
   return new Intl.NumberFormat("en-US", {
@@ -54,11 +55,7 @@ export default function ClientProductDetailPage() {
   useEffect(() => {
     if (!product || !clientId) return;
 
-    fetch("/api/client/click-stream/events", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ productId: product.id, clientId }),
-    }).catch(err => console.error("Failed to track product view", err));
+    publishItemViewEvent(product.id, clientId);
   }, [product, clientId]);
 
   const total = useMemo(
@@ -75,7 +72,7 @@ export default function ClientProductDetailPage() {
       throw new Error("Cannot place order");
     }
 
-    const response = await fetch("/api/orders", {
+    const response = await fetch("http://localhost:8080/api/orders", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

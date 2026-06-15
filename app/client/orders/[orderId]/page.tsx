@@ -14,6 +14,7 @@ import type { OrderResponse } from "../order-types";
 import { OrderStatusCard } from "./order-status-card";
 import { OrderWarningCard } from "./order-warning-card";
 import { OrderItemsCard } from "../../../components/order-items-card";
+import { publishOrderStatusEvent } from "../../../lib/websocket/events";
 
 export default function OrderDetailsPage() {
   const router = useRouter();
@@ -46,23 +47,12 @@ export default function OrderDetailsPage() {
     setDeliveryError("");
 
     try {
-      const response = await fetch("/api/orders/status-events", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          orderId: order.id,
-          status: "DELIVERED",
-          userId: String(clientId),
-          category: "ORDER_STATUS",
-        }),
+      publishOrderStatusEvent({
+        orderId: order.id,
+        status: "DELIVERED",
+        userId: String(clientId),
+        category: "ORDER_STATUS",
       });
-
-      if (!response.ok) {
-        const data = (await response.json().catch(() => ({}))) as { message?: string };
-        throw new Error(data.message ?? "Failed to mark order as delivered");
-      }
 
       setOrder((prev) => (prev ? { ...prev, status: "DELIVERED" } : null));
       await refetch();
