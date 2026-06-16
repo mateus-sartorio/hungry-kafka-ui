@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { ClientHeader } from "../../components/client-header";
 import { useClientIdentity } from "../../use-client-identity";
+import { readStoredUsername, readStoredClientId } from "../../user-config";
 import { useClientOrders } from "../../use-client-orders";
 import { formatElapsed, formatOrderCode, formatUsd, formatStatus } from "../order-format";
 import {
@@ -26,6 +27,8 @@ export default function OrderDetailsPage() {
   const [hasError, setHasError] = useState(false);
   const [isMarkingDelivered, setIsMarkingDelivered] = useState(false);
   const [deliveryError, setDeliveryError] = useState("");
+  const [now, setNow] = useState(() => Date.now());
+  const [isAuthChecked, setIsAuthChecked] = useState(false);
 
   const routeOrderSegment = useMemo(() => {
     const raw = params.orderId;
@@ -66,39 +69,45 @@ export default function OrderDetailsPage() {
     router.back();
   }, [router]);
 
-  const isExpectedDeliveryInFuture = useMemo(() => {
-    if (!order || order.status !== "OUT_FOR_DELIVERY" || !order.expectedDelivery) {
-      return false;
+  const expectedDeliveryTime = useMemo(() => {
+    if (order?.status !== "OUT_FOR_DELIVERY" || !order.expectedDelivery) {
+      return null;
     }
 
-    try {
-      const durationRegex = /^PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+(?:\.\d+)?)S)?$/;
-      const match = durationRegex.exec(order.expectedDelivery);
+    const time = new Date(order.expectedDelivery).getTime();
 
-      if (!match) {
-        return false;
-      }
-
-      const hours = parseInt(match[1] || "0", 10);
-      const minutes = parseInt(match[2] || "0", 10);
-      const seconds = parseFloat(match[3] || "0");
-
-      const durationMs = (hours * 3600 + minutes * 60 + seconds) * 1000;
-
-      const orderTime = new Date(order.createdAt).getTime();
-      const expectedDeliveryTime = orderTime + durationMs;
-
-      return expectedDeliveryTime > Date.now();
-    } catch {
-      return false;
-    }
+    return Number.isNaN(time) ? null : time;
   }, [order]);
 
+  const isOrderDelayed = expectedDeliveryTime !== null && expectedDeliveryTime < now;
+
   useEffect(() => {
-    if (!username || !clientId) {
+    if (expectedDeliveryTime === null) {
+      return;
+    }
+
+    const remaining = expectedDeliveryTime - Date.now();
+
+    if (remaining <= 0) {
+      setNow(Date.now());
+      return;
+    }
+
+    const timer = setTimeout(() => setNow(Date.now()), remaining);
+
+    return () => clearTimeout(timer);
+  }, [expectedDeliveryTime]);
+
+  useEffect(() => {
+    const storedUsername = readStoredUsername();
+    const storedClientId = readStoredClientId();
+
+    if (!storedUsername || !storedClientId) {
       router.replace("/client/settings");
     }
-  }, [clientId, router, username]);
+
+    setIsAuthChecked(true);
+  }, [router]);
 
   useEffect(() => {
     if (numericOrderId === null) {
@@ -112,10 +121,7 @@ export default function OrderDetailsPage() {
       return;
     }
 
-    const orderId = numericOrderId;
-    const cid = clientId;
-
-    const found = clientOrders.find((o) => o.id === orderId && o.clientId === cid);
+    const found = clientOrders.find((o) => o.id === numericOrderId && o.clientId === clientId);
 
     if (found) {
       setOrder(found);
@@ -124,9 +130,9 @@ export default function OrderDetailsPage() {
       return;
     }
 
-    const cached = readPersistedOrder(orderId);
+    const cached = readPersistedOrder(numericOrderId);
 
-    if (cached && cached.clientId === cid && cached.id === orderId) {
+    if (cached && cached.clientId === clientId && cached.id === numericOrderId) {
       setOrder(cached);
       setHasError(false);
       setIsReady(true);
@@ -149,10 +155,6 @@ export default function OrderDetailsPage() {
     ordersListLoading,
     username,
   ]);
-
-  if (!username) {
-    return null;
-  }
 
   if (numericOrderId === null) {
     return (
@@ -183,24 +185,9 @@ export default function OrderDetailsPage() {
               orderCode={orderCode}
               status={formatStatus(order.status)}
               estimate={`Placed ${formatElapsed(order.createdAt)}`}
-            />
+              />
 
-            {order.status === "OUT_FOR_DELIVERY" && (
-              <div className="mb-6 mt-6">
-                <button
-                  onClick={() => void handleMarkDelivered()}
-                  disabled={isMarkingDelivered}
-                  className="flex w-full items-center justify-center gap-2 bg-[#4c6700] py-3 text-base font-bold text-white transition hover:bg-[#3a5000] active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-[#737a61]"
-                >
-                  {isMarkingDelivered ? "Marking as delivered..." : "Mark as Delivered"}
-                </button>
-                {deliveryError ? (
-                  <p className="mt-2 text-sm text-red-500">{deliveryError}</p>
-                ) : null}
-              </div>
-            )}
-
-            {isExpectedDeliveryInFuture && <OrderWarningCard />}
+            {isOrderDelayed && <OrderWarningCard />}
 
             <OrderItemsCard
               items={order.items}
@@ -211,6 +198,21 @@ export default function OrderDetailsPage() {
                 ),
               )}
             />
+
+            {order.status === "OUT_FOR_DELIVERY" && (
+              <div className="mb-6 mt-6">
+                <button
+                  onClick={() => void handleMarkDelivered()}
+                  disabled={isMarkingDelivered}
+                  className="flex w-full items-center justify-center gap-2 bg-[#4c6700] py-3 text-base font-bold text-white transition hover:bg-[#3a5000] active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-[#737a61]"
+                >
+                  {isMarkingDelivered ? "Marking as delivered..." : "Mark as delivered"}
+                </button>
+                {deliveryError ? (
+                  <p className="mt-2 text-sm text-red-500">{deliveryError}</p>
+                ) : null}
+              </div>
+            )}
           </>
         )}
       </main>
