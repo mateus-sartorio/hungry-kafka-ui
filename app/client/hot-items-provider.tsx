@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect } from "react";
+import { ReactNode, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "react-toastify";
 import { useClientIdentity } from "./use-client-identity";
 import { stompSubscribe } from "../lib/websocket/stomp-client";
 import { HOT_ITEMS_DESTINATION } from "../lib/websocket/events";
 
-export function HotItemsProvider({ children }: { children: React.ReactNode }) {
+export function HotItemsProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
   const { clientId } = useClientIdentity();
 

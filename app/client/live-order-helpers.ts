@@ -17,7 +17,6 @@ export function clientOrderProgressRank(status: string): number {
   return PROGRESS_RANK_BY_STATUS[normalizeStatus(status)] ?? 0;
 }
 
-/** In-flight orders from confirmed onward, excluding delivered / cancelled. */
 export function isClientLiveOrderCandidate(order: OrderResponse): boolean {
   if (order.status === "DELIVERED" || order.status === "CANCELLED") {
     return false;
@@ -43,37 +42,17 @@ export function selectLatestLiveClientOrder(orders: OrderResponse[]): OrderRespo
   })[0];
 }
 
-function parseIsoDurationToMinutes(iso: string): number | null {
-  const match = /^PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?$/i.exec(iso.trim());
-
-  if (!match) {
-    return null;
-  }
-
-  const hours = Number.parseInt(match[1] || "0", 10);
-  const minutes = Number.parseInt(match[2] || "0", 10);
-  const seconds = Number.parseInt(match[3] || "0", 10);
-  return hours * 60 + minutes + Math.round(seconds / 60);
-}
-
 export function formatLiveOrderEta(order: OrderResponse): string {
   if (!order.expectedDelivery) {
     return "—";
   }
 
-  const totalMinutes = parseIsoDurationToMinutes(order.expectedDelivery);
+  const etaMs = new Date(order.expectedDelivery).getTime();
 
-  if (totalMinutes === null || totalMinutes <= 0) {
+  if (Number.isNaN(etaMs)) {
     return "—";
   }
 
-  const createdMs = new Date(order.createdAt).getTime();
-
-  if (Number.isNaN(createdMs)) {
-    return "—";
-  }
-
-  const etaMs = createdMs + totalMinutes * 60_000;
   const remainingMin = Math.round((etaMs - Date.now()) / 60_000);
 
   if (remainingMin <= 0) {

@@ -8,7 +8,7 @@ function isMobileDevice(): boolean {
   }
 
   const mobileUA =
-    /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Windows Phone/i.test(
+    /Android|webOS|iPhone|iPad|Opera Mini/i.test(
       navigator.userAgent,
     );
     

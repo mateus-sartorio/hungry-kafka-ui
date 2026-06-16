@@ -20,8 +20,7 @@ export default function OrderDetailsPage() {
   const router = useRouter();
   const params = useParams<{ orderId: string }>();
   const { username, clientId } = useClientIdentity();
-  const { orders: clientOrders, isLoading: ordersListLoading, hasError: ordersListError, refetch } =
-    useClientOrders();
+  const { orders: clientOrders, isLoading: ordersListLoading, hasError: ordersListError } = useClientOrders();
   const [order, setOrder] = useState<OrderResponse | null>(null);
   const [isReady, setIsReady] = useState(false);
   const [hasError, setHasError] = useState(false);
@@ -55,14 +54,13 @@ export default function OrderDetailsPage() {
       });
 
       setOrder((prev) => (prev ? { ...prev, status: "DELIVERED" } : null));
-      await refetch();
     } catch (err) {
       const message = err instanceof Error ? err.message : "Something went wrong";
       setDeliveryError(message);
     } finally {
       setIsMarkingDelivered(false);
     }
-  }, [order, clientId, refetch]);
+  }, [order, clientId]);
 
   const handleHeaderBack = useCallback(() => {
     router.back();
@@ -74,7 +72,6 @@ export default function OrderDetailsPage() {
     }
 
     try {
-      // Parse ISO 8601 duration (e.g., "PT15M", "PT1H30M")
       const durationRegex = /^PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+(?:\.\d+)?)S)?$/;
       const match = durationRegex.exec(order.expectedDelivery);
 
@@ -86,14 +83,11 @@ export default function OrderDetailsPage() {
       const minutes = parseInt(match[2] || "0", 10);
       const seconds = parseFloat(match[3] || "0");
 
-      // Calculate total milliseconds
       const durationMs = (hours * 3600 + minutes * 60 + seconds) * 1000;
 
-      // Calculate expected delivery time
       const orderTime = new Date(order.createdAt).getTime();
       const expectedDeliveryTime = orderTime + durationMs;
 
-      // Compare with current time
       return expectedDeliveryTime > Date.now();
     } catch {
       return false;
@@ -121,6 +115,15 @@ export default function OrderDetailsPage() {
     const orderId = numericOrderId;
     const cid = clientId;
 
+    const found = clientOrders.find((o) => o.id === orderId && o.clientId === cid);
+
+    if (found) {
+      setOrder(found);
+      setHasError(false);
+      setIsReady(true);
+      return;
+    }
+
     const cached = readPersistedOrder(orderId);
 
     if (cached && cached.clientId === cid && cached.id === orderId) {
@@ -132,22 +135,6 @@ export default function OrderDetailsPage() {
 
     if (ordersListLoading) {
       setIsReady(false);
-      return;
-    }
-
-    if (ordersListError && clientOrders.length === 0) {
-      setOrder(null);
-      setHasError(true);
-      setIsReady(true);
-      return;
-    }
-
-    const found = clientOrders.find((o) => o.id === orderId && o.clientId === cid);
-
-    if (found) {
-      setOrder(found);
-      setHasError(false);
-      setIsReady(true);
       return;
     }
 

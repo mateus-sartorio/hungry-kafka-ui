@@ -4,27 +4,15 @@ export const CLIENT_ID_STORAGE_KEY = "hungry-kafka.client-id";
 const CLIENT_STORAGE_CHANGE_EVENT = "hungry-kafka.client-storage-change";
 
 export function readStoredUsername(): string {
-  if (typeof window === "undefined") {
-    return "";
-  }
-
   return localStorage.getItem(USERNAME_STORAGE_KEY)?.trim() ?? "";
 }
 
 export function writeStoredUsername(username: string) {
-  if (typeof window === "undefined") {
-    return;
-  }
-
   localStorage.setItem(USERNAME_STORAGE_KEY, username.trim());
   window.dispatchEvent(new Event(CLIENT_STORAGE_CHANGE_EVENT));
 }
 
 export function readStoredClientId(): number | null {
-  if (typeof window === "undefined") {
-    return null;
-  }
-
   const storedClientId = localStorage.getItem(CLIENT_ID_STORAGE_KEY)?.trim();
 
   if (!storedClientId) {
@@ -37,19 +25,11 @@ export function readStoredClientId(): number | null {
 }
 
 export function writeStoredClientId(clientId: number) {
-  if (typeof window === "undefined") {
-    return;
-  }
-
   localStorage.setItem(CLIENT_ID_STORAGE_KEY, String(clientId));
   window.dispatchEvent(new Event(CLIENT_STORAGE_CHANGE_EVENT));
 }
 
 export async function createStoredClientId(clientName: string): Promise<number> {
-  if (typeof window === "undefined") {
-    return 0;
-  }
-
   const existingClientId = readStoredClientId();
 
   if (existingClientId) {

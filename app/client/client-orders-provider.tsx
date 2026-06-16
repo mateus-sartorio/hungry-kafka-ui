@@ -106,8 +106,6 @@ export function ClientOrdersProvider({ children }: { children: React.ReactNode }
     };
   }, [clientId]);
 
-  // A stable key over the set of order ids so the subscription effect only
-  // re-runs when orders are added/removed, not on every status update.
   const subscribedOrderIdsKey = useMemo(
     () => orders.map((order) => order.id).sort((a, b) => a - b).join(","),
     [orders],
@@ -127,8 +125,6 @@ export function ClientOrdersProvider({ children }: { children: React.ReactNode }
       return;
     }
 
-    // The backend broadcasts per-order updates to /topic/orders/{orderId}, so
-    // subscribe to every order this client currently has.
     const unsubscribers = orderIds.map((orderId) =>
       stompSubscribe(clientOrderDestination(orderId), (body) => {
         try {

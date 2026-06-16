@@ -82,7 +82,6 @@ export default function ClientHomePage() {
   }, [cartItems, clientId, commitCartItems, refetchClientOrders]);
 
   useEffect(() => {
-    // Check localStorage directly first to avoid race conditions with external store sync
     const storedUsername = readStoredUsername();
     const storedClientId = readStoredClientId();
 

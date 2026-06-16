@@ -28,10 +28,6 @@ let cachedStoredCartRaw: string | null = null;
 let cachedStoredCartItems: CartItem[] = [];
 
 export function readStoredCartItems(): CartItem[] {
-  if (typeof window === "undefined") {
-    return cachedStoredCartItems;
-  }
-
   const rawCartItems = localStorage.getItem(CART_STORAGE_KEY);
 
   if (rawCartItems === cachedStoredCartRaw) {
@@ -82,10 +78,6 @@ export function readStoredCartItems(): CartItem[] {
 }
 
 export function writeStoredCartItems(cartItems: CartItem[]) {
-  if (typeof window === "undefined") {
-    return;
-  }
-
   const rawCartItems = JSON.stringify(cartItems);
 
   localStorage.setItem(CART_STORAGE_KEY, rawCartItems);

@@ -12,7 +12,7 @@ import {
   parseStoreOrderIdFromRouteSegment,
   readPersistedStoreOrder,
 } from "../../store-order-detail-storage";
-import { fetchAllStoreOrders } from "../../store-orders-api";
+import { useStoreOrders } from "../../store-orders-provider";
 import type { StoreOrderResponse } from "../../store-order-types";
 import { OrderClientDetailsCard } from "./components/order-client-details-card";
 import { OrderDeliveryModal } from "./components/order-delivery-modal";
@@ -32,6 +32,11 @@ export default function StoreOrderDetailsPage() {
   const [isSubmittingStatus, setIsSubmittingStatus] = useState(false);
   const [statusSubmitError, setStatusSubmitError] = useState("");
 
+  const {
+    orders: storeOrders,
+    isLoading: ordersListLoading,
+  } = useStoreOrders();
+
   const routeSegment = useMemo(() => {
     const raw = params.orderId;
     return (Array.isArray(raw) ? raw[0] : raw) ?? "";
@@ -50,61 +55,49 @@ export default function StoreOrderDetailsPage() {
       return;
     }
 
-    let isActive = true;
-
-    setIsReady(false);
-    setHasError(false);
-
     const orderId = numericOrderId;
 
-    async function resolveOrder() {
-      const cached = readPersistedStoreOrder(orderId);
+    // The provider keeps `storeOrders` in sync with the backend over WebSocket,
+    // so it is the source of truth. Prefer it over the snapshot captured at
+    // navigation time, which is frozen and goes stale on status changes.
+    const found = storeOrders.find((o) => o.id === orderId);
 
-      if (cached && cached.id === orderId) {
-        if (isActive) {
-          setOrder(cached);
-          setStatus(cached.status);
-          setHasError(false);
-          setIsReady(true);
-        }
-
-        return;
-      }
-
-      try {
-        const { orders, error } = await fetchAllStoreOrders();
-
-        if (error) {
-          throw new Error("Failed to load orders");
-        }
-
-        const found = orders.find((o) => o.id === orderId);
-
-        if (!found) {
-          throw new Error("Order not found");
-        }
-
-        if (isActive) {
-          setOrder(found);
-          setStatus(found.status);
-          setHasError(false);
-          setIsReady(true);
-        }
-      } catch {
-        if (isActive) {
-          setOrder(null);
-          setHasError(true);
-          setIsReady(true);
-        }
-      }
+    if (found) {
+      setOrder(found);
+      setHasError(false);
+      setIsReady(true);
+      return;
     }
 
-    void resolveOrder();
+    // Fall back to the persisted snapshot so we can render immediately while the
+    // list loads or if this order is not in the store's list yet.
+    const cached = readPersistedStoreOrder(orderId);
 
-    return () => {
-      isActive = false;
-    };
-  }, [numericOrderId]);
+    if (cached && cached.id === orderId) {
+      setOrder(cached);
+      setHasError(false);
+      setIsReady(true);
+      return;
+    }
+
+    if (ordersListLoading) {
+      setIsReady(false);
+      return;
+    }
+
+    setOrder(null);
+    setHasError(true);
+    setIsReady(true);
+  }, [numericOrderId, storeOrders, ordersListLoading]);
+
+  // Keep the displayed status in sync with the (live) order. Optimistic updates
+  // in `submitOrderStatus` set it sooner; this confirms it when the backend
+  // broadcast arrives.
+  useEffect(() => {
+    if (order) {
+      setStatus(order.status);
+    }
+  }, [order]);
 
   const submitOrderStatus = useCallback(async (kafkaStatus: StoreKafkaOrderStatus, nextDisplayStatus: string, deliveryMinutes?: number) => {
     if (!order) {
@@ -178,7 +171,7 @@ export default function StoreOrderDetailsPage() {
   }, [status, submitOrderStatus]);
 
   const readOnlyMessage = useMemo(() => {
-    if (status === "OUT FOR DELIVERY") {
+    if (status === "OUT_FOR_DELIVERY") {
       return "This order is out for delivery. The client will confirm the delivery.";
     }
 
@@ -274,7 +267,7 @@ export default function StoreOrderDetailsPage() {
         onIncreaseDeliveryMinutes={() => setDeliveryMinutes((current) => current + 1)}
         onConfirm={() => {
           void (async () => {
-            const ok = await submitOrderStatus("OUT_FOR_DELIVERY", "OUT FOR DELIVERY", deliveryMinutes);
+            const ok = await submitOrderStatus("OUT_FOR_DELIVERY", "OUT_FOR_DELIVERY", deliveryMinutes);
             if (ok) {
               setEstimatedDelivery(String(deliveryMinutes));
               setIsDeliveryModalOpen(false);
