@@ -156,6 +156,10 @@ export default function OrderDetailsPage() {
     username,
   ]);
 
+  if (!isAuthChecked || !username) {
+    return null;
+  }
+
   if (numericOrderId === null) {
     return (
       <div className="min-h-screen bg-[#f7faf8] text-[#181c1b]">
