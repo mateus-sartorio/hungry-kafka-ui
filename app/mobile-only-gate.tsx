@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { ReactNode, useEffect, useState } from "react";
 
 function isMobileDevice(): boolean {
   if (typeof window === "undefined") {
@@ -34,7 +34,7 @@ function DesktopBlockedPage() {
   );
 }
 
-export function MobileOnlyGate({ children }: { children: React.ReactNode }) {
+export function MobileOnlyGate({ children }: { children: ReactNode }) {
   const [allowed, setAllowed] = useState(true);
 
   useEffect(() => {

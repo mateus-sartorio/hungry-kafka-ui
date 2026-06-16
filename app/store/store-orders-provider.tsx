@@ -2,6 +2,7 @@
 
 import {
   createContext,
+  ReactNode,
   useCallback,
   useContext,
   useEffect,
@@ -27,7 +28,7 @@ type StoreOrdersContextValue = {
 
 const StoreOrdersContext = createContext<StoreOrdersContextValue | null>(null);
 
-export function StoreOrdersProvider({ children }: { children: React.ReactNode }) {
+export function StoreOrdersProvider({ children }: { children: ReactNode }) {
   const [orders, setOrders] = useState<StoreOrderResponse[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [hasError, setHasError] = useState(false);
