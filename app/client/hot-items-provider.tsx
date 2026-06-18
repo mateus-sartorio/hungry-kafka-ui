@@ -16,11 +16,15 @@ export function HotItemsProvider({ children }: { children: ReactNode }) {
 
     const unsubscribe = stompSubscribe(HOT_ITEMS_DESTINATION, (body) => {
       try {
-        const payload = body as { productId?: number };
+        const payload = body as { productId?: number; clientId?: number };
 
         if (payload?.productId) {
+          if (payload.clientId && payload.clientId !== clientId) {
+            return;
+          }
+          
           const productId = payload.productId;
-          toast.success(`🔥 A product is HOT right now! Click here to check it out!`, {
+          toast.success(`🔥 Você ganhou um cupom de desconto para este produto! Clique aqui para aproveitar!`, {
             position: "top-center",
             autoClose: 5000,
             hideProgressBar: false,
