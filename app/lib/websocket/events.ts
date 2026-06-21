@@ -5,6 +5,7 @@ import { stompPublish } from "./stomp-client";
 
 export const STORE_ORDERS_DESTINATION = "/topic/orders";
 export const HOT_ITEMS_DESTINATION = "/topic/hot-items";
+export const ABANDONED_CARTS_DESTINATION = "/topic/abandoned-carts";
 
 export function clientOrderDestination(orderId: number): string {
   return `/topic/orders/${orderId}`;
