@@ -28,7 +28,7 @@ export function HotLeadsProvider({ children }: { children: ReactNode }) {
           };
           setLeads(prev => [newLead, ...prev]);
           setUnreadCount(prev => prev + 1);
-          toast.info(`Novo Hot Lead! Cliente ${payload.clientId} interessado no Produto ${payload.productId}`, {
+          toast.info(`New Hot Lead! Customer ${payload.clientId} is interested in Product ${payload.productId}`, {
             position: "bottom-right",
             autoClose: 5000,
           });
@@ -65,7 +65,7 @@ export function HotLeadsProvider({ children }: { children: ReactNode }) {
       <div className={`fixed top-0 right-0 h-full w-4/5 max-w-sm bg-white shadow-2xl z-50 transform transition-transform duration-300 ease-in-out flex flex-col ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}>
         <div className="p-4 bg-orange-500 text-white font-bold shadow-md flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span>Painel Hot Leads</span>
+            <span>Hot Leads Panel</span>
             <span className="bg-orange-700 px-2 py-0.5 rounded text-xs">{leads.length}</span>
           </div>
           <button onClick={() => setIsOpen(false)} className="text-white text-2xl leading-none">&times;</button>
@@ -74,8 +74,8 @@ export function HotLeadsProvider({ children }: { children: ReactNode }) {
           {leads.length === 0 ? (
             <div className="text-center text-gray-400 mt-10">
               <span className="text-4xl mb-2 block">📡</span>
-              <p className="text-sm">Monitorando atividade...</p>
-              <p className="text-xs mt-1">Aguardando clientes com alta intenção de compra.</p>
+              <p className="text-sm">Monitoring activity...</p>
+              <p className="text-xs mt-1">Waiting for customers with high purchase intent.</p>
             </div>
           ) : (
             leads.map((lead, i) => (
@@ -83,14 +83,14 @@ export function HotLeadsProvider({ children }: { children: ReactNode }) {
                 <div className="absolute top-0 left-0 w-1 h-full bg-orange-400 group-hover:bg-orange-600 transition-colors"></div>
                 <div className="pl-2">
                   <p className="font-bold text-orange-700 text-sm mb-1 flex items-center">
-                    <span className="mr-1">🔥</span> Alta Intenção!
+                    <span className="mr-1">🔥</span> High Intent!
                   </p>
                   <div className="flex justify-between items-center text-sm mb-1">
-                    <span className="text-gray-600">Cliente:</span>
+                    <span className="text-gray-600">Customer:</span>
                     <span className="font-mono bg-gray-100 px-1 rounded border font-semibold">{lead.clientId}</span>
                   </div>
                   <div className="flex justify-between items-center text-sm">
-                    <span className="text-gray-600">Produto:</span>
+                    <span className="text-gray-600">Product:</span>
                     <span className="font-mono bg-gray-100 px-1 rounded border font-semibold">{lead.productId}</span>
                   </div>
                   <p className="text-[10px] text-gray-400 mt-2 text-right">

@@ -16,7 +16,7 @@ type OrderDetailsCardProps = {
 function formatCreatedTime(createdAt: string): string {
   try {
     const date = new Date(createdAt);
-    return date.toLocaleString("pt-BR", {
+    return date.toLocaleString("en-US", {
       month: "2-digit",
       day: "2-digit",
       year: "2-digit",

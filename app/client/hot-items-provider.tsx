@@ -24,7 +24,7 @@ export function HotItemsProvider({ children }: { children: ReactNode }) {
           }
           
           const productId = payload.productId;
-          toast.success(`🔥 Você ganhou um cupom de desconto para este produto! Clique aqui para aproveitar!`, {
+          toast.success(`🔥 You got a discount coupon for this product! Click here to redeem it!`, {
             position: "top-center",
             autoClose: 5000,
             hideProgressBar: false,
