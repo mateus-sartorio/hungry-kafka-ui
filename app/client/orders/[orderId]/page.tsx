@@ -86,16 +86,34 @@ export default function OrderDetailsPage() {
       return;
     }
 
-    const remaining = expectedDeliveryTime - Date.now();
-
-    if (remaining <= 0) {
+    if (Date.now() >= expectedDeliveryTime) {
       setNow(Date.now());
       return;
     }
 
-    const timer = setTimeout(() => setNow(Date.now()), remaining);
+    // Re-check the current time on a short interval (instead of a single
+    // setTimeout sized to the whole remaining duration) so the delayed banner
+    // appears on its own. A long-lived timeout is throttled in backgrounded
+    // tabs and paused while the device sleeps, which leaves the banner hidden
+    // until a manual refresh once the delivery time has passed.
+    const interval = setInterval(() => {
+      const current = Date.now();
+      setNow(current);
 
-    return () => clearTimeout(timer);
+      if (current >= expectedDeliveryTime) {
+        clearInterval(interval);
+      }
+    }, 1000);
+
+    // Re-sync immediately when the tab regains focus, so returning to a
+    // backgrounded tab reflects the elapsed time without waiting for a tick.
+    const syncNow = () => setNow(Date.now());
+    document.addEventListener("visibilitychange", syncNow);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", syncNow);
+    };
   }, [expectedDeliveryTime]);
 
   useEffect(() => {
