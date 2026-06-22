@@ -4,6 +4,7 @@ import { StoreKafkaOrderStatus } from "@/app/store/store-order-status";
 import { stompPublish } from "./stomp-client";
 
 export const STORE_ORDERS_DESTINATION = "/topic/orders";
+export const LEAD_ITEMS_DESTINATION = "/topic/lead-items";
 export const HOT_ITEMS_DESTINATION = "/topic/hot-items";
 export const ABANDONED_CARTS_DESTINATION = "/topic/abandoned-carts";
 

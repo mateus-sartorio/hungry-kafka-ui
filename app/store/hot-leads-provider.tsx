@@ -4,12 +4,20 @@ import { useEffect, useState, ReactNode } from "react";
 import Image from "next/image";
 import { stompSubscribe } from "../lib/websocket/stomp-client";
 import {
+  LEAD_ITEMS_DESTINATION,
   HOT_ITEMS_DESTINATION,
   ABANDONED_CARTS_DESTINATION,
 } from "../lib/websocket/events";
 import { toast } from "react-toastify";
 
 const API_BASE = "http://localhost:8080";
+
+// Hot-item events are not tied to a specific client, but the only catalog
+// endpoint is per-client (/products/{clientId}). The product list it returns is
+// the store's shared menu, so we use a default client id purely to resolve the
+// product's name and photo. If it can't be resolved the card degrades to the
+// product id.
+const DEFAULT_CATALOG_CLIENT_ID = 1;
 
 type CartProduct = {
   productId: number;
@@ -18,6 +26,12 @@ type CartProduct = {
 };
 
 type ClientEvent =
+  | {
+      id: string;
+      type: "hot-item";
+      product: CartProduct;
+      timestamp: number;
+    }
   | {
       id: string;
       type: "hot-lead";
@@ -36,15 +50,43 @@ type ClientEvent =
     };
 
 async function fetchClientName(clientId: number): Promise<string | undefined> {
+  // The /api/clients/{id} payload serializes the client's preferences with a
+  // back-reference to the client, so the body is enormous (and effectively
+  // recursive). We can't JSON.parse it, but the client's own "name" is the
+  // first field, so we stream just the start of the response, grab the name,
+  // and abort the rest of the download.
+  const controller = new AbortController();
   try {
-    const response = await fetch(`${API_BASE}/api/clients/${clientId}`);
-    if (!response.ok) {
+    const response = await fetch(`${API_BASE}/api/clients/${clientId}`, {
+      signal: controller.signal,
+    });
+    if (!response.ok || !response.body) {
       return undefined;
     }
-    const client = (await response.json()) as { name?: string };
-    return client.name;
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    const namePattern = /"name"\s*:\s*"((?:\\.|[^"\\])*)"/;
+    let text = "";
+
+    while (text.length < 8192) {
+      const { value, done } = await reader.read();
+      if (done) {
+        break;
+      }
+      text += decoder.decode(value, { stream: true });
+      const match = text.match(namePattern);
+      if (match) {
+        controller.abort();
+        return match[1];
+      }
+    }
+
+    return text.match(namePattern)?.[1];
   } catch {
     return undefined;
+  } finally {
+    controller.abort();
   }
 }
 
@@ -102,7 +144,7 @@ export function HotLeadsProvider({ children }: { children: ReactNode }) {
   const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
-    const unsubscribeHotItems = stompSubscribe(HOT_ITEMS_DESTINATION, (body) => {
+    const unsubscribeHotItems = stompSubscribe(LEAD_ITEMS_DESTINATION, (body) => {
       try {
         const payload = body as { productId?: number; clientId?: number };
         if (payload?.productId && payload?.clientId) {
@@ -186,9 +228,51 @@ export function HotLeadsProvider({ children }: { children: ReactNode }) {
       }
     );
 
+    const unsubscribeHotItemsTrending = stompSubscribe(
+      HOT_ITEMS_DESTINATION,
+      (body) => {
+        try {
+          const payload = body as { productId?: number };
+          if (payload?.productId) {
+            const { productId } = payload;
+            const id = crypto.randomUUID();
+            const newEvent: ClientEvent = {
+              id,
+              type: "hot-item",
+              product: { productId },
+              timestamp: Date.now(),
+            };
+            setEvents(prev => [newEvent, ...prev]);
+            setUnreadCount(prev => prev + 1);
+            toast.info(`Hot Item! Product ${productId} is trending right now`, {
+              position: "bottom-right",
+              autoClose: 5000,
+            });
+
+            // Enrich the card with the product's name and photo. Hot items have
+            // no client, so we resolve against the default shared catalog.
+            void fetchCartProducts(DEFAULT_CATALOG_CLIENT_ID, [productId]).then(
+              (products) => {
+                setEvents(prev =>
+                  prev.map(event =>
+                    event.id === id && event.type === "hot-item"
+                      ? { ...event, product: products[0] ?? event.product }
+                      : event,
+                  ),
+                );
+              },
+            );
+          }
+        } catch (err) {
+          console.error("Failed to parse hot item event", err);
+        }
+      }
+    );
+
     return () => {
       unsubscribeHotItems();
       unsubscribeAbandonedCarts();
+      unsubscribeHotItemsTrending();
     };
   }, []);
 
@@ -221,40 +305,66 @@ export function HotLeadsProvider({ children }: { children: ReactNode }) {
           </div>
           <button onClick={() => setIsOpen(false)} className="text-white text-2xl leading-none">&times;</button>
         </div>
-        <div className="p-4 flex-1 overflow-auto bg-gray-50 flex flex-col gap-3">
+        <div className="p-4 flex-1 min-h-0 overflow-y-auto bg-gray-50 flex flex-col gap-3">
           {events.length === 0 ? (
             <div className="text-center text-gray-400 mt-10">
               <span className="text-4xl mb-2 block">📡</span>
               <p className="text-sm">Monitoring activity...</p>
             </div>
           ) : (
-            events.map((event) =>
-              event.type === "hot-lead" ? (
-                <div key={event.id} className="bg-white p-3 rounded-lg border border-orange-200 shadow-sm relative overflow-hidden group">
-                  <div className="absolute top-0 left-0 w-1 h-full bg-orange-400 group-hover:bg-orange-600 transition-colors"></div>
-                  <div className="pl-2">
-                    <p className="font-bold text-orange-700 text-sm mb-1 flex items-center">
-                      <span className="mr-1">🔥</span> High Intent!
-                    </p>
-                    <div className="flex justify-between items-center text-sm mb-2">
-                      <span className="text-gray-600">Customer:</span>
-                      <span className="font-semibold text-gray-800">
-                        {event.clientName ?? `#${event.clientId}`}
-                      </span>
-                    </div>
-                    <div className="text-sm">
-                      <span className="text-gray-600">Interested in:</span>
-                      <div className="mt-1.5">
-                        <ProductRow product={event.product} />
+            events.map((event) => {
+              if (event.type === "hot-item") {
+                return (
+                  <div key={event.id} className="shrink-0 bg-white p-3 rounded-lg border border-red-200 shadow-sm relative overflow-hidden group">
+                    <div className="absolute top-0 left-0 w-1 h-full bg-red-400 group-hover:bg-red-600 transition-colors"></div>
+                    <div className="pl-2">
+                      <p className="font-bold text-red-700 text-sm mb-1 flex items-center">
+                        <span className="mr-1">🔥</span> Hot Item
+                      </p>
+                      <div className="text-sm">
+                        <span className="text-gray-600">Trending now:</span>
+                        <div className="mt-1.5">
+                          <ProductRow product={event.product} />
+                        </div>
                       </div>
+                      <p className="text-[10px] text-gray-400 mt-2 text-right">
+                        {new Date(event.timestamp).toLocaleTimeString()}
+                      </p>
                     </div>
-                    <p className="text-[10px] text-gray-400 mt-2 text-right">
-                      {new Date(event.timestamp).toLocaleTimeString()}
-                    </p>
                   </div>
-                </div>
-              ) : (
-                <div key={event.id} className="bg-white p-3 rounded-lg border border-amber-200 shadow-sm relative overflow-hidden group">
+                );
+              }
+
+              if (event.type === "hot-lead") {
+                return (
+                  <div key={event.id} className="shrink-0 bg-white p-3 rounded-lg border border-orange-200 shadow-sm relative overflow-hidden group">
+                    <div className="absolute top-0 left-0 w-1 h-full bg-orange-400 group-hover:bg-orange-600 transition-colors"></div>
+                    <div className="pl-2">
+                      <p className="font-bold text-orange-700 text-sm mb-1 flex items-center">
+                        <span className="mr-1">🔥</span> High Intent!
+                      </p>
+                      <div className="flex justify-between items-center text-sm mb-2">
+                        <span className="text-gray-600">Customer:</span>
+                        <span className="font-semibold text-gray-800">
+                          {event.clientName ?? `#${event.clientId}`}
+                        </span>
+                      </div>
+                      <div className="text-sm">
+                        <span className="text-gray-600">Interested in:</span>
+                        <div className="mt-1.5">
+                          <ProductRow product={event.product} />
+                        </div>
+                      </div>
+                      <p className="text-[10px] text-gray-400 mt-2 text-right">
+                        {new Date(event.timestamp).toLocaleTimeString()}
+                      </p>
+                    </div>
+                  </div>
+                );
+              }
+
+              return (
+                <div key={event.id} className="shrink-0 bg-white p-3 rounded-lg border border-amber-200 shadow-sm relative overflow-hidden group">
                   <div className="absolute top-0 left-0 w-1 h-full bg-amber-400 group-hover:bg-amber-600 transition-colors"></div>
                   <div className="pl-2">
                     <p className="font-bold text-amber-700 text-sm mb-1 flex items-center">
@@ -283,8 +393,8 @@ export function HotLeadsProvider({ children }: { children: ReactNode }) {
                     </p>
                   </div>
                 </div>
-              )
-            )
+              );
+            })
           )}
         </div>
       </div>

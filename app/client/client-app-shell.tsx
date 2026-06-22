@@ -11,7 +11,10 @@ export function ClientAppShell({ children }: { children: ReactNode }) {
     <ClientOrdersProvider>
       <HotItemsProvider>
         {children}
-        <ToastContainer className="!w-auto !left-4 !right-4 !top-20" />
+        <ToastContainer
+          className="!w-auto !left-4 !right-4 !top-20"
+          toastClassName="!mb-3"
+        />
       </HotItemsProvider>
     </ClientOrdersProvider>
   );
