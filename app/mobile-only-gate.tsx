@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { ReactNode, useEffect, useState } from "react";
 
 function isMobileDevice(): boolean {
   if (typeof window === "undefined") {
@@ -8,9 +8,10 @@ function isMobileDevice(): boolean {
   }
 
   const mobileUA =
-    /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Windows Phone/i.test(
+    /Android|webOS|iPhone|iPad|Opera Mini/i.test(
       navigator.userAgent,
     );
+    
   const narrowScreen = window.matchMedia("(max-width: 900px)").matches;
   const hasTouch = navigator.maxTouchPoints > 0;
 
@@ -33,7 +34,7 @@ function DesktopBlockedPage() {
   );
 }
 
-export function MobileOnlyGate({ children }: { children: React.ReactNode }) {
+export function MobileOnlyGate({ children }: { children: ReactNode }) {
   const [allowed, setAllowed] = useState(true);
 
   useEffect(() => {

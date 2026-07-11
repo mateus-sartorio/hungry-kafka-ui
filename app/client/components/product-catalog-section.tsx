@@ -1,8 +1,8 @@
 "use client";
 
-import { ProductCard } from "./components/product-card";
-import { FeaturedProductCard } from "./components/featured-product-card";
-import type { CatalogItem } from "./home-data";
+import { CatalogItem } from "../home-data";
+import { FeaturedProductCard } from "./featured-product-card";
+import { ProductCard } from "./product-card";
 
 type ProductCatalogSectionProps = {
   products: CatalogItem[];

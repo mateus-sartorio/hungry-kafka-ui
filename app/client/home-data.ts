@@ -20,18 +20,14 @@ export type ClientHomeData = {
   cartItems: CartItem[];
 };
 
-export const CART_STORAGE_KEY = "queue-sine.client-cart";
+export const CART_STORAGE_KEY = "hungry-kafka.client-cart";
 
-export const CART_CHANGE_EVENT = "queue-sine.client-cart-change";
+export const CART_CHANGE_EVENT = "hungry-kafka.client-cart-change";
 
 let cachedStoredCartRaw: string | null = null;
 let cachedStoredCartItems: CartItem[] = [];
 
 export function readStoredCartItems(): CartItem[] {
-  if (typeof window === "undefined") {
-    return cachedStoredCartItems;
-  }
-
   const rawCartItems = localStorage.getItem(CART_STORAGE_KEY);
 
   if (rawCartItems === cachedStoredCartRaw) {
@@ -82,10 +78,6 @@ export function readStoredCartItems(): CartItem[] {
 }
 
 export function writeStoredCartItems(cartItems: CartItem[]) {
-  if (typeof window === "undefined") {
-    return;
-  }
-
   const rawCartItems = JSON.stringify(cartItems);
 
   localStorage.setItem(CART_STORAGE_KEY, rawCartItems);

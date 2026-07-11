@@ -1,7 +1,7 @@
 import type { StoreOrderResponse } from "./store-order-types";
 
-export const STORE_ORDERS_CHANGE_EVENT = "queue-sine.store-orders-change";
-export const STORE_ORDERS_STORAGE_KEY = "queue-sine.store-orders";
+export const STORE_ORDERS_CHANGE_EVENT = "hungry-kafka.store-orders-change";
+export const STORE_ORDERS_STORAGE_KEY = "hungry-kafka.store-orders";
 
 type StoredStoreOrdersPayload = {
   orders: StoreOrderResponse[];

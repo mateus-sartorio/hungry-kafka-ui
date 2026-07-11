@@ -1,28 +1,16 @@
 import type { OrderResponse } from "./order-types";
 
-const STORAGE_KEY_PREFIX = "queue-sine.order-detail";
+const STORAGE_KEY_PREFIX = "hungry-kafka.order-detail";
 
 function storageKey(orderId: number) {
   return `${STORAGE_KEY_PREFIX}:${orderId}`;
 }
 
 export function persistOrderForDetailRoute(order: OrderResponse) {
-  if (typeof window === "undefined") {
-    return;
-  }
-
-  try {
-    sessionStorage.setItem(storageKey(order.id), JSON.stringify(order));
-  } catch {
-    // ignore quota / private mode
-  }
+  sessionStorage.setItem(storageKey(order.id), JSON.stringify(order));
 }
 
 export function readPersistedOrder(orderId: number): OrderResponse | null {
-  if (typeof window === "undefined") {
-    return null;
-  }
-
   const raw = sessionStorage.getItem(storageKey(orderId));
 
   if (!raw) {
@@ -36,9 +24,8 @@ export function readPersistedOrder(orderId: number): OrderResponse | null {
   }
 }
 
-/** Route segment is order id, e.g. `442`. */
 export function parseOrderIdFromRouteSegment(segment: string): number | null {
   const normalized = segment.trim().toLowerCase();
-  const asNum = Number.parseInt(normalized, 10);
-  return Number.isFinite(asNum) && asNum > 0 ? asNum : null;
+  const asNumber = Number.parseInt(normalized, 10);
+  return Number.isFinite(asNumber) && asNumber > 0 ? asNumber : null;
 }

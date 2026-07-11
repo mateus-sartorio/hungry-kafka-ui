@@ -7,7 +7,6 @@ import { useClientIdentity } from "./use-client-identity";
 import { CartDrawer } from "./components/cart-drawer";
 import { ClientHeader } from "./components/client-header";
 import { LiveOrder } from "./components/live-order";
-import { ProductCatalogSection } from "./product-catalog-section";
 import type { CatalogItem } from "./home-data";
 import { readStoredUsername, readStoredClientId } from "./user-config";
 import { useClientOrders } from "./use-client-orders";
@@ -20,6 +19,7 @@ import {
   liveOrderProgressPercent,
   selectLatestLiveClientOrder,
 } from "./live-order-helpers";
+import { ProductCatalogSection } from "./components/product-catalog-section";
 
 function formatUsd(value: number) {
   return new Intl.NumberFormat("en-US", {
@@ -59,7 +59,7 @@ export default function ClientHomePage() {
       throw new Error("Cannot place order");
     }
 
-    const response = await fetch("/api/orders", {
+    const response = await fetch("http://localhost:8080/api/orders", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -82,7 +82,6 @@ export default function ClientHomePage() {
   }, [cartItems, clientId, commitCartItems, refetchClientOrders]);
 
   useEffect(() => {
-    // Check localStorage directly first to avoid race conditions with external store sync
     const storedUsername = readStoredUsername();
     const storedClientId = readStoredClientId();
 

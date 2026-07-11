@@ -73,7 +73,7 @@ export function FeaturedProductCard({ product, detailHref, onAdd }: FeaturedProd
             aria-label={`Add ${product.name} to cart`}
           >
             <FaPlus className="h-4 w-4" />
-            Add to Order
+            Add to cart
           </button>
         </div>
       </div>

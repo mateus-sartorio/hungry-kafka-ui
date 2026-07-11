@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { ClientHeader } from "../../components/client-header";
 import { useClientIdentity } from "../../use-client-identity";
+import { readStoredUsername, readStoredClientId } from "../../user-config";
 import { useClientOrders } from "../../use-client-orders";
 import { formatElapsed, formatOrderCode, formatUsd, formatStatus } from "../order-format";
 import {
@@ -11,21 +12,23 @@ import {
   readPersistedOrder,
 } from "../order-detail-storage";
 import type { OrderResponse } from "../order-types";
-import { OrderStatusCard } from "./order-status-card";
-import { OrderWarningCard } from "./order-warning-card";
+import { OrderStatusCard } from "./components/order-status-card";
+import { OrderWarningCard } from "./components/order-warning-card";
 import { OrderItemsCard } from "../../../components/order-items-card";
+import { publishOrderStatusEvent } from "../../../lib/websocket/events";
 
 export default function OrderDetailsPage() {
   const router = useRouter();
   const params = useParams<{ orderId: string }>();
   const { username, clientId } = useClientIdentity();
-  const { orders: clientOrders, isLoading: ordersListLoading, hasError: ordersListError, refetch } =
-    useClientOrders();
+  const { orders: clientOrders, isLoading: ordersListLoading, hasError: ordersListError } = useClientOrders();
   const [order, setOrder] = useState<OrderResponse | null>(null);
   const [isReady, setIsReady] = useState(false);
   const [hasError, setHasError] = useState(false);
   const [isMarkingDelivered, setIsMarkingDelivered] = useState(false);
   const [deliveryError, setDeliveryError] = useState("");
+  const [now, setNow] = useState(() => Date.now());
+  const [isAuthChecked, setIsAuthChecked] = useState(false);
 
   const routeOrderSegment = useMemo(() => {
     const raw = params.orderId;
@@ -46,75 +49,83 @@ export default function OrderDetailsPage() {
     setDeliveryError("");
 
     try {
-      const response = await fetch("/api/orders/status-events", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          orderId: order.id,
-          status: "DELIVERED",
-          userId: String(clientId),
-          category: "ORDER_STATUS",
-        }),
+      publishOrderStatusEvent({
+        orderId: order.id,
+        status: "DELIVERED",
+        userId: String(clientId),
+        category: "ORDER_STATUS",
       });
 
-      if (!response.ok) {
-        const data = (await response.json().catch(() => ({}))) as { message?: string };
-        throw new Error(data.message ?? "Failed to mark order as delivered");
-      }
-
       setOrder((prev) => (prev ? { ...prev, status: "DELIVERED" } : null));
-      await refetch();
     } catch (err) {
       const message = err instanceof Error ? err.message : "Something went wrong";
       setDeliveryError(message);
     } finally {
       setIsMarkingDelivered(false);
     }
-  }, [order, clientId, refetch]);
+  }, [order, clientId]);
 
   const handleHeaderBack = useCallback(() => {
     router.back();
   }, [router]);
 
-  const isExpectedDeliveryInFuture = useMemo(() => {
-    if (!order || order.status !== "OUT_FOR_DELIVERY" || !order.expectedDelivery) {
-      return false;
+  const expectedDeliveryTime = useMemo(() => {
+    if (order?.status !== "OUT_FOR_DELIVERY" || !order.expectedDelivery) {
+      return null;
     }
 
-    try {
-      // Parse ISO 8601 duration (e.g., "PT15M", "PT1H30M")
-      const durationRegex = /^PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+(?:\.\d+)?)S)?$/;
-      const match = durationRegex.exec(order.expectedDelivery);
+    const time = new Date(order.expectedDelivery).getTime();
 
-      if (!match) {
-        return false;
-      }
-
-      const hours = parseInt(match[1] || "0", 10);
-      const minutes = parseInt(match[2] || "0", 10);
-      const seconds = parseFloat(match[3] || "0");
-
-      // Calculate total milliseconds
-      const durationMs = (hours * 3600 + minutes * 60 + seconds) * 1000;
-
-      // Calculate expected delivery time
-      const orderTime = new Date(order.createdAt).getTime();
-      const expectedDeliveryTime = orderTime + durationMs;
-
-      // Compare with current time
-      return expectedDeliveryTime > Date.now();
-    } catch {
-      return false;
-    }
+    return Number.isNaN(time) ? null : time;
   }, [order]);
 
+  const isOrderDelayed = expectedDeliveryTime !== null && expectedDeliveryTime < now;
+
   useEffect(() => {
-    if (!username || !clientId) {
+    if (expectedDeliveryTime === null) {
+      return;
+    }
+
+    if (Date.now() >= expectedDeliveryTime) {
+      setNow(Date.now());
+      return;
+    }
+
+    // Re-check the current time on a short interval (instead of a single
+    // setTimeout sized to the whole remaining duration) so the delayed banner
+    // appears on its own. A long-lived timeout is throttled in backgrounded
+    // tabs and paused while the device sleeps, which leaves the banner hidden
+    // until a manual refresh once the delivery time has passed.
+    const interval = setInterval(() => {
+      const current = Date.now();
+      setNow(current);
+
+      if (current >= expectedDeliveryTime) {
+        clearInterval(interval);
+      }
+    }, 1000);
+
+    // Re-sync immediately when the tab regains focus, so returning to a
+    // backgrounded tab reflects the elapsed time without waiting for a tick.
+    const syncNow = () => setNow(Date.now());
+    document.addEventListener("visibilitychange", syncNow);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", syncNow);
+    };
+  }, [expectedDeliveryTime]);
+
+  useEffect(() => {
+    const storedUsername = readStoredUsername();
+    const storedClientId = readStoredClientId();
+
+    if (!storedUsername || !storedClientId) {
       router.replace("/client/settings");
     }
-  }, [clientId, router, username]);
+
+    setIsAuthChecked(true);
+  }, [router]);
 
   useEffect(() => {
     if (numericOrderId === null) {
@@ -128,12 +139,18 @@ export default function OrderDetailsPage() {
       return;
     }
 
-    const orderId = numericOrderId;
-    const cid = clientId;
+    const found = clientOrders.find((o) => o.id === numericOrderId && o.clientId === clientId);
 
-    const cached = readPersistedOrder(orderId);
+    if (found) {
+      setOrder(found);
+      setHasError(false);
+      setIsReady(true);
+      return;
+    }
 
-    if (cached && cached.clientId === cid && cached.id === orderId) {
+    const cached = readPersistedOrder(numericOrderId);
+
+    if (cached && cached.clientId === clientId && cached.id === numericOrderId) {
       setOrder(cached);
       setHasError(false);
       setIsReady(true);
@@ -142,22 +159,6 @@ export default function OrderDetailsPage() {
 
     if (ordersListLoading) {
       setIsReady(false);
-      return;
-    }
-
-    if (ordersListError && clientOrders.length === 0) {
-      setOrder(null);
-      setHasError(true);
-      setIsReady(true);
-      return;
-    }
-
-    const found = clientOrders.find((o) => o.id === orderId && o.clientId === cid);
-
-    if (found) {
-      setOrder(found);
-      setHasError(false);
-      setIsReady(true);
       return;
     }
 
@@ -173,7 +174,7 @@ export default function OrderDetailsPage() {
     username,
   ]);
 
-  if (!username) {
+  if (!isAuthChecked || !username) {
     return null;
   }
 
@@ -205,25 +206,10 @@ export default function OrderDetailsPage() {
             <OrderStatusCard
               orderCode={orderCode}
               status={formatStatus(order.status)}
-              estimate={`Placed ${formatElapsed(order.createdAt)} ago`}
-            />
+              estimate={`Placed ${formatElapsed(order.createdAt)}`}
+              />
 
-            {order.status === "OUT_FOR_DELIVERY" && (
-              <div className="mb-6 mt-6">
-                <button
-                  onClick={() => void handleMarkDelivered()}
-                  disabled={isMarkingDelivered}
-                  className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[#4c6700] py-3 text-base font-bold text-white transition hover:bg-[#3a5000] active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-[#737a61]"
-                >
-                  {isMarkingDelivered ? "Marking as delivered..." : "Mark as Delivered"}
-                </button>
-                {deliveryError ? (
-                  <p className="mt-2 text-sm text-red-500">{deliveryError}</p>
-                ) : null}
-              </div>
-            )}
-
-            {isExpectedDeliveryInFuture && <OrderWarningCard />}
+            {isOrderDelayed && <OrderWarningCard />}
 
             <OrderItemsCard
               items={order.items}
@@ -234,6 +220,21 @@ export default function OrderDetailsPage() {
                 ),
               )}
             />
+
+            {order.status === "OUT_FOR_DELIVERY" && (
+              <div className="mb-6 mt-6">
+                <button
+                  onClick={() => void handleMarkDelivered()}
+                  disabled={isMarkingDelivered}
+                  className="flex w-full items-center justify-center gap-2 bg-[#4c6700] py-3 text-base font-bold text-white transition hover:bg-[#3a5000] active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-[#737a61]"
+                >
+                  {isMarkingDelivered ? "Marking as delivered..." : "Mark as delivered"}
+                </button>
+                {deliveryError ? (
+                  <p className="mt-2 text-sm text-red-500">{deliveryError}</p>
+                ) : null}
+              </div>
+            )}
           </>
         )}
       </main>

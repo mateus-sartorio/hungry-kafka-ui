@@ -6,20 +6,19 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { FaArrowLeft } from "react-icons/fa";
 import { formatUsd, sumOrderTotal } from "../../store-order-format";
 import {
-  formatStoreStatusBadge,
-  normalizeStoreOrderStatus,
   type StoreKafkaOrderStatus,
 } from "../../store-order-status";
 import {
   parseStoreOrderIdFromRouteSegment,
   readPersistedStoreOrder,
 } from "../../store-order-detail-storage";
-import { fetchAllStoreOrders } from "../../store-orders-api";
+import { useStoreOrders } from "../../store-orders-provider";
 import type { StoreOrderResponse } from "../../store-order-types";
-import { OrderClientDetailsCard } from "./order-client-details-card";
-import { OrderDeliveryModal } from "./order-delivery-modal";
+import { OrderClientDetailsCard } from "./components/order-client-details-card";
+import { OrderDeliveryModal } from "./components/order-delivery-modal";
 import { OrderItemsCard } from "../../../components/order-items-card";
-import { OrderStatusCard, type OrderStatusPrimaryAction } from "./order-status-card";
+import { OrderStatusCard, type OrderStatusPrimaryAction } from "./components/order-status-card";
+import { publishOrderStatusEvent } from "../../../lib/websocket/events";
 
 export default function StoreOrderDetailsPage() {
   const params = useParams<{ orderId: string }>();
@@ -33,6 +32,11 @@ export default function StoreOrderDetailsPage() {
   const [isSubmittingStatus, setIsSubmittingStatus] = useState(false);
   const [statusSubmitError, setStatusSubmitError] = useState("");
 
+  const {
+    orders: storeOrders,
+    isLoading: ordersListLoading,
+  } = useStoreOrders();
+
   const routeSegment = useMemo(() => {
     const raw = params.orderId;
     return (Array.isArray(raw) ? raw[0] : raw) ?? "";
@@ -43,13 +47,6 @@ export default function StoreOrderDetailsPage() {
     [routeSegment],
   );
 
-  const statusPhase = useMemo(() => normalizeStoreOrderStatus(status), [status]);
-
-  const statusBadge = useMemo(
-    () => formatStoreStatusBadge(statusPhase, status),
-    [status, statusPhase],
-  );
-
   useEffect(() => {
     if (numericOrderId === null) {
       setOrder(null);
@@ -58,61 +55,49 @@ export default function StoreOrderDetailsPage() {
       return;
     }
 
-    let isActive = true;
-
-    setIsReady(false);
-    setHasError(false);
-
     const orderId = numericOrderId;
 
-    async function resolveOrder() {
-      const cached = readPersistedStoreOrder(orderId);
+    // The provider keeps `storeOrders` in sync with the backend over WebSocket,
+    // so it is the source of truth. Prefer it over the snapshot captured at
+    // navigation time, which is frozen and goes stale on status changes.
+    const found = storeOrders.find((o) => o.id === orderId);
 
-      if (cached && cached.id === orderId) {
-        if (isActive) {
-          setOrder(cached);
-          setStatus(cached.status);
-          setHasError(false);
-          setIsReady(true);
-        }
-
-        return;
-      }
-
-      try {
-        const { orders, error } = await fetchAllStoreOrders();
-
-        if (error) {
-          throw new Error("Failed to load orders");
-        }
-
-        const found = orders.find((o) => o.id === orderId);
-
-        if (!found) {
-          throw new Error("Order not found");
-        }
-
-        if (isActive) {
-          setOrder(found);
-          setStatus(found.status);
-          setHasError(false);
-          setIsReady(true);
-        }
-      } catch {
-        if (isActive) {
-          setOrder(null);
-          setHasError(true);
-          setIsReady(true);
-        }
-      }
+    if (found) {
+      setOrder(found);
+      setHasError(false);
+      setIsReady(true);
+      return;
     }
 
-    void resolveOrder();
+    // Fall back to the persisted snapshot so we can render immediately while the
+    // list loads or if this order is not in the store's list yet.
+    const cached = readPersistedStoreOrder(orderId);
 
-    return () => {
-      isActive = false;
-    };
-  }, [numericOrderId]);
+    if (cached && cached.id === orderId) {
+      setOrder(cached);
+      setHasError(false);
+      setIsReady(true);
+      return;
+    }
+
+    if (ordersListLoading) {
+      setIsReady(false);
+      return;
+    }
+
+    setOrder(null);
+    setHasError(true);
+    setIsReady(true);
+  }, [numericOrderId, storeOrders, ordersListLoading]);
+
+  // Keep the displayed status in sync with the (live) order. Optimistic updates
+  // in `submitOrderStatus` set it sooner; this confirms it when the backend
+  // broadcast arrives.
+  useEffect(() => {
+    if (order) {
+      setStatus(order.status);
+    }
+  }, [order]);
 
   const submitOrderStatus = useCallback(async (kafkaStatus: StoreKafkaOrderStatus, nextDisplayStatus: string, deliveryMinutes?: number) => {
     if (!order) {
@@ -123,30 +108,14 @@ export default function StoreOrderDetailsPage() {
     setIsSubmittingStatus(true);
 
     try {
-      const payload: Record<string, unknown> = {
+      publishOrderStatusEvent({
         orderId: order.id,
         status: kafkaStatus,
         userId: order.client?.clientId != null ? String(order.client.clientId) : "",
         category: "ORDER_STATUS",
-      };
-
-      // Convert deliveryMinutes to ISO 8601 duration format (e.g., "PT15M" for 15 minutes)
-      if (kafkaStatus === "OUT_FOR_DELIVERY" && deliveryMinutes) {
-        payload.expectedDelivery = `PT${deliveryMinutes}M`;
-      }
-
-      const response = await fetch("/api/orders/status-events", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
+        expectedDelivery:
+          kafkaStatus === "OUT_FOR_DELIVERY" && deliveryMinutes ? `PT${deliveryMinutes}M` : null,
       });
-
-      if (!response.ok) {
-        const data = (await response.json().catch(() => ({}))) as { message?: string };
-        throw new Error(data.message ?? "Failed to publish order status");
-      }
 
       setStatus(nextDisplayStatus);
       return true;
@@ -160,7 +129,7 @@ export default function StoreOrderDetailsPage() {
   }, [order]);
 
   const primaryAction = useMemo((): OrderStatusPrimaryAction | null => {
-    switch (statusPhase) {
+    switch (status) {
       case "CREATED":
         return {
           label: "ACCEPT",
@@ -185,10 +154,10 @@ export default function StoreOrderDetailsPage() {
       default:
         return null;
     }
-  }, [statusPhase, submitOrderStatus]);
+  }, [status, submitOrderStatus]);
 
   const secondaryAction = useMemo(() => {
-    if (statusPhase === "CREATED") {
+    if (status === "CREATED") {
       return {
         label: "CANCEL ORDER",
         onClick: () => {
@@ -199,27 +168,23 @@ export default function StoreOrderDetailsPage() {
       };
     }
     return null;
-  }, [statusPhase, submitOrderStatus]);
+  }, [status, submitOrderStatus]);
 
   const readOnlyMessage = useMemo(() => {
-    if (statusPhase === "OUT_FOR_DELIVERY") {
-      return "This order is out for delivery. The store workflow is complete; further updates happen outside the store dashboard.";
+    if (status === "OUT_FOR_DELIVERY") {
+      return "This order is out for delivery. The client will confirm the delivery.";
     }
 
-    if (statusPhase === "DELIVERED") {
+    if (status === "DELIVERED") {
       return "This order has been delivered.";
     }
 
-    if (statusPhase === "CANCELLED") {
-      return "This order has been cancelled. No further actions can be taken.";
-    }
-
-    if (statusPhase === "UNKNOWN") {
-      return "This order status is not recognized for store actions. Try refreshing after the server updates.";
+    if (status === "CANCELLED") {
+      return "This order has been cancelled.";
     }
 
     return null;
-  }, [statusPhase]);
+  }, [status]);
 
   const orderCode = numericOrderId !== null ? `#${numericOrderId}` : "#—";
 
@@ -282,7 +247,7 @@ export default function StoreOrderDetailsPage() {
             />
 
             <OrderStatusCard
-              statusBadge={statusBadge}
+              statusBadge={status}
               estimatedDelivery={estimatedDelivery}
               primaryAction={primaryAction}
               secondaryAction={secondaryAction}
@@ -302,7 +267,7 @@ export default function StoreOrderDetailsPage() {
         onIncreaseDeliveryMinutes={() => setDeliveryMinutes((current) => current + 1)}
         onConfirm={() => {
           void (async () => {
-            const ok = await submitOrderStatus("OUT_FOR_DELIVERY", "OUT FOR DELIVERY", deliveryMinutes);
+            const ok = await submitOrderStatus("OUT_FOR_DELIVERY", "OUT_FOR_DELIVERY", deliveryMinutes);
             if (ok) {
               setEstimatedDelivery(String(deliveryMinutes));
               setIsDeliveryModalOpen(false);

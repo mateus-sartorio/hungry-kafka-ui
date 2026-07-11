@@ -1,30 +1,18 @@
-export const USERNAME_STORAGE_KEY = "queue-sine.username";
-export const CLIENT_ID_STORAGE_KEY = "queue-sine.client-id";
+export const USERNAME_STORAGE_KEY = "hungry-kafka.username";
+export const CLIENT_ID_STORAGE_KEY = "hungry-kafka.client-id";
 
-const CLIENT_STORAGE_CHANGE_EVENT = "queue-sine.client-storage-change";
+const CLIENT_STORAGE_CHANGE_EVENT = "hungry-kafka.client-storage-change";
 
 export function readStoredUsername(): string {
-  if (typeof window === "undefined") {
-    return "";
-  }
-
   return localStorage.getItem(USERNAME_STORAGE_KEY)?.trim() ?? "";
 }
 
 export function writeStoredUsername(username: string) {
-  if (typeof window === "undefined") {
-    return;
-  }
-
   localStorage.setItem(USERNAME_STORAGE_KEY, username.trim());
   window.dispatchEvent(new Event(CLIENT_STORAGE_CHANGE_EVENT));
 }
 
 export function readStoredClientId(): number | null {
-  if (typeof window === "undefined") {
-    return null;
-  }
-
   const storedClientId = localStorage.getItem(CLIENT_ID_STORAGE_KEY)?.trim();
 
   if (!storedClientId) {
@@ -37,26 +25,18 @@ export function readStoredClientId(): number | null {
 }
 
 export function writeStoredClientId(clientId: number) {
-  if (typeof window === "undefined") {
-    return;
-  }
-
   localStorage.setItem(CLIENT_ID_STORAGE_KEY, String(clientId));
   window.dispatchEvent(new Event(CLIENT_STORAGE_CHANGE_EVENT));
 }
 
 export async function createStoredClientId(clientName: string): Promise<number> {
-  if (typeof window === "undefined") {
-    return 0;
-  }
-
   const existingClientId = readStoredClientId();
 
   if (existingClientId) {
     return existingClientId;
   }
 
-  const response = await fetch("/api/clients", {
+  const response = await fetch("http://localhost:8080/api/clients", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -80,7 +60,7 @@ export async function updateStoredClientName(
   clientId: number,
   clientName: string,
 ): Promise<void> {
-  const response = await fetch(`/api/clients/${clientId}`, {
+  const response = await fetch(`http://localhost:8080/api/clients/${clientId}`, {
     method: "PATCH",
     headers: {
       "Content-Type": "application/json",
