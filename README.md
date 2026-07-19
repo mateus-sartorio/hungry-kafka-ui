@@ -1,5 +1,5 @@
 <h1>
-  <img src="docs/logo.png" width="32" align="middle" />&nbsp;Hungry Kafka UI
+  <img src="docs/logo.png" width="32" align="top" />&nbsp;Hungry Kafka UI
 </h1>
 
 <p align="center">
