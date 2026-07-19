@@ -1,54 +1,112 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🍔 Hungry Kafka UI
 
-## Getting Started
+> The web front-end for **Hungry Kafka** — a real-time, event-driven food-delivery platform.
 
-First, run the development server:
+Hungry Kafka UI is a **Next.js** application that serves two distinct experiences from a single codebase: a **customer app** for browsing a personalized catalog, ordering and tracking deliveries live, and a **store app** with a live order feed and a real-time situations dashboard. Every interaction flows to the backend, and every status change and situation of interest streams back over a **WebSocket** — the interface updates the instant something happens, without polling.
+
+Developed for the **"Sistemas Orientados a Eventos" (Event-Driven Systems)** course at **UFES**. The event-driven backend (Spring Boot · Kafka · Kafka Streams) lives in a separate project, [`hungry-kafka`](https://github.com/mateus-sartorio/hungry-kafka).
+
+<img src="https://skillicons.dev/icons?i=nextjs,react,typescript,tailwind" />
+
+---
+
+## 📱 The apps
+
+| 🧑 Customer app | 🏪 Store app |
+| --- | --- |
+| <img src="docs/client-app.png" width="280" /> | <img src="docs/store-app.png" width="280" /> |
+
+---
+
+## ✨ What it does
+
+### 🧑 Customer app
+
+- **Browse a food catalog** — ranked per customer by inferred preference, so the food you engage with most floats to the top.
+- **View product details** — full description, price and a featured highlight.
+- **Manage a cart** — add and remove items from a slide-out cart drawer, with a live item count.
+- **Place orders** and review order history at a glance (total, item count, status).
+- **Track orders live** — every status change (accepted → preparing → out for delivery → delivered) streams in over the WebSocket in real time, including the expected delivery time.
+- **Account settings** — manage the current customer identity.
+
+### 🏪 Store app
+
+- **Live order feed** — new orders pop into the list the instant a customer places them, no refresh needed.
+- **Advance each order** through its lifecycle; the customer sees the change immediately on their side.
+- **Real-time situations dashboard** — fed live by the backend's stream-processing engine, surfacing:
+  - 🔥 **Hot Item** — a product getting an unusual burst of attention right now.
+  - 🎯 **Hot Lead** — a customer showing high intent to buy a product.
+  - 🛒 **Abandoned Cart** — a customer who filled a cart but did not check out in time.
+
+---
+
+## 🧰 Tech stack
+
+| Technology | Role |
+| --- | --- |
+| **Next.js 16** (App Router) | React framework, routing and dev/build tooling |
+| **React 19** | UI components |
+| **TypeScript** | Type-safe application code |
+| **Tailwind CSS 4** | Styling |
+| **@stomp/stompjs** | STOMP over WebSocket — live order and situation updates |
+
+---
+
+## 🚀 Running the project
+
+### Prerequisites
+
+- **Node.js 20+**
+- A running instance of the **Hungry Kafka backend** — see [**Running the backend**](#-running-the-backend) below.
+
+### 1. Install dependencies
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
 ```
 
-Environment-specific dev scripts:
+### 2. Run the front-end
+
+The customer app and the store app run as two separate dev servers, each with an isolated Next.js build directory (`.next-client` and `.next-store`), so you can run **both at the same time** in separate terminals:
 
 ```bash
-npm run dev:store
+# Terminal 1 — customer app
 npm run dev:client
+
+# Terminal 2 — store app
+npm run dev:store
 ```
 
-These scripts use isolated Next build directories (`.next-store` and `.next-client`),
-so you can run both at the same time in separate terminals. If a port is busy, Next.js
-automatically falls back to another available port.
+Each server opens on [http://localhost:3000](http://localhost:3000); if the port is busy, Next.js automatically falls back to the next available port (e.g. `:3001`).
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+> [!TIP]
+> The easiest way to manage Node.js versions is with [**nvm**](https://github.com/nvm-sh/nvm).
+>
+> To install nvm:
+> `curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash`
+>
+> Then open a new terminal and install/activate Node.js 20:
+> `nvm install 20`
+> `nvm use 20`
+>
+> To set it as the default version:
+> `nvm alias default 20`
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+---
 
-## Home Page Selection
+## ⚙️ Configuration reference
 
-Set `NEXT_PUBLIC_HOME_PAGE_MODE` to choose what `/` opens:
+Each app reads its environment from a dedicated file — [`.env-client`](.env-client) and [`.env-store`](.env-store):
 
-- `client` (default fallback)
-- `store`
+| Key | Default | Meaning |
+| --- | --- | --- |
+| `NEXT_PUBLIC_HOME_PAGE_MODE` | `client` / `store` | Which app the `/` route opens |
+| `NEXT_PUBLIC_WS_URL` | `ws://localhost:8080/ws` | Backend STOMP WebSocket endpoint |
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+The REST API base (`http://localhost:8080`) points at the backend running locally.
 
-## Learn More
+---
 
-To learn more about Next.js, take a look at the following resources:
+## 🔗 Running the backend
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+This UI needs the **Hungry Kafka** backend running on `http://localhost:8080` (REST + WebSocket). See the backend README for prerequisites and full setup instructions → [**github.com/mateus-sartorio/hungry-kafka**](https://github.com/mateus-sartorio/hungry-kafka#-running-the-project)
