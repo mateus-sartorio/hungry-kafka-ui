@@ -1,4 +1,6 @@
-# 🍔 Hungry Kafka UI
+<h1>
+  <img src="docs/logo.png" width="32" align="top" />&nbsp;Hungry Kafka UI
+</h1>
 
 <p align="center">
   <img src="https://skillicons.dev/icons?i=nextjs,react,typescript,tailwind" /> <br/>
