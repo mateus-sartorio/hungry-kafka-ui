@@ -1,20 +1,31 @@
 # 🍔 Hungry Kafka UI
 
+<p align="center">
+  <img src="https://skillicons.dev/icons?i=nextjs,react,typescript,tailwind" /> <br/>
+  <a href="https://github.com/mateus-sartorio/hungry-kafka-ui"><kbd>🟢 Frontend</kbd></a>
+  <a href="https://github.com/mateus-sartorio/hungry-kafka"><kbd>🔵 Backend</kbd></a>
+</p>
+
 > The web front-end for **Hungry Kafka** — a real-time, event-driven food-delivery platform.
 
 Hungry Kafka UI is a **Next.js** application that serves two distinct experiences from a single codebase: a **customer app** for browsing a personalized catalog, ordering and tracking deliveries live, and a **store app** with a live order feed and a real-time situations dashboard. Every interaction flows to the backend, and every status change and situation of interest streams back over a **WebSocket** — the interface updates the instant something happens, without polling.
 
 Developed for the **"Sistemas Orientados a Eventos" (Event-Driven Systems)** course at **UFES**. The event-driven backend (Spring Boot · Kafka · Kafka Streams) lives in a separate project, [`hungry-kafka`](https://github.com/mateus-sartorio/hungry-kafka).
 
-<img src="https://skillicons.dev/icons?i=nextjs,react,typescript,tailwind" />
-
 ---
 
 ## 📱 The apps
 
-| 🧑 Customer app | 🏪 Store app |
-| --- | --- |
-| <img src="docs/client-app.png" width="280" /> | <img src="docs/store-app.png" width="280" /> |
+<table align="center">
+  <tr>
+    <th>🧑 Customer app</th>
+    <th>🏪 Store app</th>
+  </tr>
+  <tr>
+    <td><img src="docs/client-app.png" width="280" /></td>
+    <td><img src="docs/store-app.png" width="280" /></td>
+  </tr>
+</table>
 
 ---
 
